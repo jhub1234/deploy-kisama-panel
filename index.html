@@ -187,7 +187,7 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 直接锁定包含 [HOST] 或 [BIZ] 的这一行
+          // 1. 卡片内部注入：直接扫描带有 [HOST] 或 [BIZ] 的信息行
           var allElements = document.getElementsByTagName('*');
           for (var i = 0; i < allElements.length; i++) {
             var el = allElements[i];
@@ -246,25 +246,25 @@
                 '<div class="custom-speed-box">' +
                   '<div>' +
                     '<div class="speed-col-title title-down">📥 DOWN (下载)</div>' +
-                    '<div class="speed-col-item">速: <b>' + d.netInSpeedStr + '</b></div>' +
-                    '<div class="speed-col-item">量: <span>' + d.netInTotalStr + '</span></div>' +
+                    '<div class="speed-col-item">速度: <b>' + d.netInSpeedStr + '</b></div>' +
+                    '<div class="speed-col-item">流量: <span>' + d.netInTotalStr + '</span></div>' +
                   '</div>' +
                   '<div>' +
                     '<div class="speed-col-title title-up">📤 UP (上传)</div>' +
-                    '<div class="speed-col-item">速: <b>' + d.netOutSpeedStr + '</b></div>' +
-                    '<div class="speed-col-item">量: <span>' + d.netOutTotalStr + '</span></div>' +
+                    '<div class="speed-col-item">速度: <b>' + d.netOutSpeedStr + '</b></div>' +
+                    '<div class="speed-col-item">流量: <span>' + d.netOutTotalStr + '</span></div>' +
                   '</div>' +
                 '</div>';
             }
           }
 
-          // 2. 清理可能误插入到外部的孤立条
+          // 2. 清理外部孤立条
           var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper');
           for (var k = 0; k < strayBoxes.length; k++) {
             strayBoxes[k].remove();
           }
 
-          // 3. 顶部米黄色总览横幅注入
+          // 3. 顶部米黄色总览横幅更新
           for (var j = 0; j < allElements.length; j++) {
             var item = allElements[j];
             if (item.children.length === 0 && item.textContent && item.textContent.indexOf('筛选:') !== -1) {
