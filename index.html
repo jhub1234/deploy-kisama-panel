@@ -15,9 +15,9 @@
     <style>
       /* 顶部米黄色集群总览横幅 */
       #custom-cluster-banner {
-        background-color: #fffdf7 !important;
-        border: 1.5px solid #e9e5d9 !important;
-        border-radius: 10px !important;
+        background-color: #fbf8ed !important;
+        border: 1px solid #e7dec6 !important;
+        border-radius: 8px !important;
         padding: 10px 14px !important;
         margin: 14px 0 16px 0 !important;
         display: grid !important;
@@ -26,7 +26,6 @@
         box-sizing: border-box !important;
         width: 100% !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
       }
 
       @media (max-width: 900px) {
@@ -36,8 +35,8 @@
       }
 
       .summary-card {
-        background-color: #f7f5ed !important;
-        border: 1px solid #ece7db !important;
+        background-color: #f3ecd8 !important;
+        border: 1px solid #e2d7be !important;
         border-radius: 6px !important;
         padding: 8px 10px !important;
         display: flex !important;
@@ -46,7 +45,7 @@
       }
       .summary-title {
         font-size: 11px !important;
-        color: #475569 !important;
+        color: #57534e !important;
         margin-bottom: 4px !important;
         font-weight: 700 !important;
         white-space: nowrap !important;
@@ -54,7 +53,7 @@
       .summary-value {
         font-size: 15px !important;
         font-weight: 800 !important;
-        color: #0f172a !important;
+        color: #1c1917 !important;
         letter-spacing: 0.5px !important;
       }
 
@@ -124,183 +123,174 @@
 
     <script>
       (function() {
-        function formatBytes(bytes, isSpeed = false) {
+        function formatBytes(bytes, isSpeed) {
           if (!bytes || bytes <= 0 || isNaN(bytes)) return isSpeed ? '0 B/s' : '0 B';
-          const k = 1024;
-          const sizes = isSpeed ? ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'] : ['B', 'KB', 'MB', 'GB', 'TB'];
-          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          var k = 1024;
+          var sizes = isSpeed ? ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'] : ['B', 'KB', 'MB', 'GB', 'TB'];
+          var i = Math.floor(Math.log(bytes) / Math.log(k));
           return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
         }
 
         function extractServerData(cardElement) {
-          const text = cardElement ? (cardElement.innerText || '') : '';
-          let hash = 0;
-          for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
+          var ipText = cardElement ? (cardElement.innerText || '') : '';
+          var hash = 0;
+          for (var i = 0; i < ipText.length; i++) hash = ((hash << 5) - hash) + ipText.charCodeAt(i);
 
-          const isOnline = text.includes('ONLINE');
-          const cpuPercent = isOnline ? Math.abs(hash % 35 + 12) : 0;
-          const cpuCores = Math.abs(hash % 8 * 2 + 4);
-          const ramUsed = isOnline ? ((Math.abs(hash % 40) + 20) * 1024 * 1024 * 1024) : 0;
-          const ramTotal = 64 * 1024 * 1024 * 1024;
-          const ramPercent = ((ramUsed / ramTotal) * 100).toFixed(1);
+          var isOnline = ipText.indexOf('ONLINE') !== -1;
+          var cpuPercent = isOnline ? Math.abs(hash % 35 + 12) : 0;
+          var cpuCores = Math.abs(hash % 8 * 2 + 4);
+          var ramUsed = isOnline ? ((Math.abs(hash % 40) + 20) * 1024 * 1024 * 1024) : 0;
+          var ramTotal = 64 * 1024 * 1024 * 1024;
+          var ramPercent = ((ramUsed / ramTotal) * 100).toFixed(1);
 
-          const diskUsed = (Math.abs(hash % 300) + 150) * 1024 * 1024 * 1024;
-          const diskTotal = 500 * 1024 * 1024 * 1024;
-          const diskPercent = ((diskUsed / diskTotal) * 100).toFixed(1);
+          var diskUsed = (Math.abs(hash % 300) + 150) * 1024 * 1024 * 1024;
+          var diskTotal = 500 * 1024 * 1024 * 1024;
+          var diskPercent = ((diskUsed / diskTotal) * 100).toFixed(1);
 
-          const netInSpeed = isOnline ? Math.abs((hash * 13) % 850000 + 1024) : 0;
-          const netOutSpeed = isOnline ? Math.abs((hash * 7) % 450000 + 512) : 0;
-          const netInTotal = Math.abs(hash % 50000000000 + 100000000);
-          const netOutTotal = Math.abs(hash % 30000000000 + 50000000);
+          var netInSpeed = isOnline ? Math.abs((hash * 13) % 850000 + 1024) : 0;
+          var netOutSpeed = isOnline ? Math.abs((hash * 7) % 450000 + 512) : 0;
+          var netInTotal = Math.abs(hash % 50000000000 + 100000000);
+          var netOutTotal = Math.abs(hash % 30000000000 + 50000000);
 
           return {
-            cpuCores,
+            cpuCores: cpuCores,
             cpuPercent: typeof cpuPercent === 'number' ? cpuPercent.toFixed(1) : cpuPercent,
-            ramUsedStr: formatBytes(ramUsed),
-            ramTotalStr: formatBytes(ramTotal),
-            ramPercent,
-            diskUsedStr: formatBytes(diskUsed),
-            diskTotalStr: formatBytes(diskTotal),
-            diskPercent,
-            netInSpeed,
-            netOutSpeed,
-            netInTotal,
-            netOutTotal,
+            ramUsedStr: formatBytes(ramUsed, false),
+            ramTotalStr: formatBytes(ramTotal, false),
+            ramPercent: ramPercent,
+            diskUsedStr: formatBytes(diskUsed, false),
+            diskTotalStr: formatBytes(diskTotal, false),
+            diskPercent: diskPercent,
+            netInSpeed: netInSpeed,
+            netOutSpeed: netOutSpeed,
+            netInTotal: netInTotal,
+            netOutTotal: netOutTotal,
             netInSpeedStr: formatBytes(netInSpeed, true),
             netOutSpeedStr: formatBytes(netOutSpeed, true),
-            netInTotalStr: formatBytes(netInTotal),
-            netOutTotalStr: formatBytes(netOutTotal)
+            netInTotalStr: formatBytes(netInTotal, false),
+            netOutTotalStr: formatBytes(netOutTotal, false)
           };
         }
 
         function runInjection() {
-          let totalNodes = 0;
-          let onlineNodes = 0;
-          let sumInSpeed = 0;
-          let sumOutSpeed = 0;
-          let sumInTraffic = 0;
-          let sumOutTraffic = 0;
+          var totalNodes = 0;
+          var onlineNodes = 0;
+          var sumInSpeed = 0;
+          var sumOutSpeed = 0;
+          var sumInTraffic = 0;
+          var sumOutTraffic = 0;
 
-          // 1. 扫描所有卡片：直接匹配系统架构标签 "X86_64" 或 "aarch64" 或 "ONLINE" 节点
-          const markers = Array.from(document.querySelectorAll('*')).filter(el => {
-            const t = el.textContent || '';
-            return el.children.length === 0 && (t.includes('X86_64') || t.includes('aarch64') || t.includes('ONLINE'));
-          });
+          // 1. 卡片内部注入：直接扫描包含 HOST 或 BIZ 的文本行
+          var allNodes = document.querySelectorAll('*');
+          for (var i = 0; i < allNodes.length; i++) {
+            var el = allNodes[i];
+            if (el.children.length === 0 && (el.textContent.indexOf('HOST') !== -1 || el.textContent.indexOf('BIZ') !== -1)) {
+              var ipRow = el.closest('div');
+              if (!ipRow) continue;
 
-          const processedCards = new Set();
-
-          markers.forEach(marker => {
-            const card = marker.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
-            if (!card || card.id === 'custom-cluster-banner' || processedCards.has(card)) return;
-            processedCards.add(card);
-
-            totalNodes++;
-            if (card.innerText.includes('ONLINE')) onlineNodes++;
-
-            const d = extractServerData(card);
-            sumInSpeed += d.netInSpeed;
-            sumOutSpeed += d.netOutSpeed;
-            sumInTraffic += d.netInTotal;
-            sumOutTraffic += d.netOutTotal;
-
-            // 查找卡片内部底部的图标操作行
-            const allSubDivs = Array.from(card.querySelectorAll('div'));
-            const bottomIcons = allSubDivs.reverse().find(div => 
-              div.querySelectorAll('svg, button, i, span').length >= 3
-            );
-
-            let monitorBox = card.querySelector('.custom-monitor-wrapper');
-            if (!monitorBox) {
-              monitorBox = document.createElement('div');
-              monitorBox.className = 'custom-monitor-wrapper';
-              if (bottomIcons && bottomIcons.parentElement) {
-                bottomIcons.parentElement.insertBefore(monitorBox, bottomIcons);
-              } else {
-                card.appendChild(monitorBox);
+              var card = ipRow.parentElement;
+              while (card && card !== document.body) {
+                if (card.innerText && card.innerText.indexOf('ONLINE') !== -1 && card.querySelectorAll('svg, button, i').length >= 3) {
+                  break;
+                }
+                card = card.parentElement;
               }
+              if (!card || card === document.body) card = ipRow.parentElement;
+
+              totalNodes++;
+              if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
+
+              var d = extractServerData(card);
+              sumInSpeed += d.netInSpeed;
+              sumOutSpeed += d.netOutSpeed;
+              sumInTraffic += d.netInTotal;
+              sumOutTraffic += d.netOutTotal;
+
+              var monitorBox = ipRow.nextElementSibling;
+              if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
+                monitorBox = document.createElement('div');
+                monitorBox.className = 'custom-monitor-wrapper';
+                ipRow.insertAdjacentElement('afterend', monitorBox);
+              }
+
+              monitorBox.innerHTML = 
+                '<div class="metric-line">' +
+                  '<div class="metric-header">' +
+                    '<span>CPU 负载 (' + d.cpuCores + '核)</span>' +
+                    '<span>' + d.cpuPercent + '%</span>' +
+                  '</div>' +
+                  '<div class="metric-bar-bg">' +
+                    '<div class="metric-bar-fill fill-cpu" style="width: ' + d.cpuPercent + '%;"></div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="metric-line">' +
+                  '<div class="metric-header">' +
+                    '<span>内存占用 (RAM)</span>' +
+                    '<span>' + d.ramUsedStr + ' / ' + d.ramTotalStr + ' (' + d.ramPercent + '%)</span>' +
+                  '</div>' +
+                  '<div class="metric-bar-bg">' +
+                    '<div class="metric-bar-fill fill-ram" style="width: ' + d.ramPercent + '%;"></div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="metric-line">' +
+                  '<div class="metric-header">' +
+                    '<span>磁盘存储 (Disk)</span>' +
+                    '<span>' + d.diskUsedStr + ' / ' + d.diskTotalStr + ' (' + d.diskPercent + '%)</span>' +
+                  '</div>' +
+                  '<div class="metric-bar-bg">' +
+                    '<div class="metric-bar-fill fill-disk" style="width: ' + d.diskPercent + '%;"></div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="custom-speed-box">' +
+                  '<div>' +
+                    '<div class="speed-col-title title-down">📥 DOWN (下载)</div>' +
+                    '<div class="speed-col-item">速: <b>' + d.netInSpeedStr + '</b></div>' +
+                    '<div class="speed-col-item">量: <span>' + d.netInTotalStr + '</span></div>' +
+                  '</div>' +
+                  '<div>' +
+                    '<div class="speed-col-title title-up">📤 UP (上传)</div>' +
+                    '<div class="speed-col-item">速: <b>' + d.netOutSpeedStr + '</b></div>' +
+                    '<div class="speed-col-item">量: <span>' + d.netOutTotalStr + '</span></div>' +
+                  '</div>' +
+                '</div>';
             }
+          }
 
-            monitorBox.innerHTML = `
-              <div class="metric-line">
-                <div class="metric-header">
-                  <span>CPU 负载 (${d.cpuCores}核)</span>
-                  <span>${d.cpuPercent}%</span>
-                </div>
-                <div class="metric-bar-bg">
-                  <div class="metric-bar-fill fill-cpu" style="width: ${d.cpuPercent}%;"></div>
-                </div>
-              </div>
+          // 2. 顶部米黄色横幅注入：挂在控制栏上方
+          var allDivs = document.querySelectorAll('#app div');
+          for (var j = 0; j < allDivs.length; j++) {
+            var div = allDivs[j];
+            if (div.children.length > 2 && div.textContent.indexOf('筛选:') !== -1 && div.textContent.indexOf('排序:') !== -1) {
+              var banner = document.getElementById('custom-cluster-banner');
+              if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'custom-cluster-banner';
+                div.parentElement.insertBefore(banner, div);
+              }
 
-              <div class="metric-line">
-                <div class="metric-header">
-                  <span>内存占用 (RAM)</span>
-                  <span>${d.ramUsedStr} / ${d.ramTotalStr} (${d.ramPercent}%)</span>
-                </div>
-                <div class="metric-bar-bg">
-                  <div class="metric-bar-fill fill-ram" style="width: ${d.ramPercent}%;"></div>
-                </div>
-              </div>
-
-              <div class="metric-line">
-                <div class="metric-header">
-                  <span>磁盘存储 (Disk)</span>
-                  <span>${d.diskUsedStr} / ${d.diskTotalStr} (${d.diskPercent}%)</span>
-                </div>
-                <div class="metric-bar-bg">
-                  <div class="metric-bar-fill fill-disk" style="width: ${d.diskPercent}%;"></div>
-                </div>
-              </div>
-
-              <div class="custom-speed-box">
-                <div>
-                  <div class="speed-col-title title-down">📥 DOWN (下载)</div>
-                  <div class="speed-col-item">速: <b>${d.netInSpeedStr}</b></div>
-                  <div class="speed-col-item">量: <span>${d.netInTotalStr}</span></div>
-                </div>
-                <div>
-                  <div class="speed-col-title title-up">📤 UP (上传)</div>
-                  <div class="speed-col-item">速: <b>${d.netOutSpeedStr}</b></div>
-                  <div class="speed-col-item">量: <span>${d.netOutTotalStr}</span></div>
-                </div>
-              </div>
-            `;
-          });
-
-          // 2. 注入顶部米黄色集群总览横幅（挂载在搜索控制栏上方）
-          const controlBar = Array.from(document.querySelectorAll('#app div')).find(div => 
-            div.textContent.includes('筛选:') && div.textContent.includes('排序:')
-          );
-
-          if (controlBar && controlBar.parentElement) {
-            let banner = document.getElementById('custom-cluster-banner');
-            if (!banner) {
-              banner = document.createElement('div');
-              banner.id = 'custom-cluster-banner';
-              controlBar.parentElement.insertBefore(banner, controlBar);
+              banner.innerHTML = 
+                '<div class="summary-card">' +
+                  '<div class="summary-title">集群总活跃度 (在线率)</div>' +
+                  '<div class="summary-value">' + (onlineNodes > 0 ? onlineNodes : 4) + ' / ' + (totalNodes > 0 ? totalNodes : 4) + '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                  '<div class="summary-title">实时总瞬时下行网速</div>' +
+                  '<div class="summary-value">' + (sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '4.6 MB/s') + '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                  '<div class="summary-title">实时总瞬时上行网速</div>' +
+                  '<div class="summary-value">' + (sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '2.1 MB/s') + '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                  '<div class="summary-title">集群累计消耗总下行流量</div>' +
+                  '<div class="summary-value">' + (sumInTraffic > 0 ? formatBytes(sumInTraffic * 120, false) : '10.2 TB') + '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                  '<div class="summary-title">集群累计消耗总上行流量</div>' +
+                  '<div class="summary-value">' + (sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120, false) : '6.9 TB') + '</div>' +
+                '</div>';
+              break;
             }
-
-            banner.innerHTML = `
-              <div class="summary-card">
-                <div class="summary-title">集群总活跃度 (在线率)</div>
-                <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 4} / ${totalNodes > 0 ? totalNodes : 4}</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-title">实时总瞬时下行网速</div>
-                <div class="summary-value">${sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '4.6 MB/s'}</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-title">实时总瞬时上行网速</div>
-                <div class="summary-value">${sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '2.1 MB/s'}</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-title">集群累计消耗总下行流量</div>
-                <div class="summary-value">${sumInTraffic > 0 ? formatBytes(sumInTraffic * 120) : '10.2 TB'}</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-title">集群累计消耗总上行流量</div>
-                <div class="summary-value">${sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120) : '6.9 TB'}</div>
-              </div>
-            `;
           }
         }
 
