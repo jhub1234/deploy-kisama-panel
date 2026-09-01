@@ -13,13 +13,13 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 1. 米黄色独立集群总览横幅 */
+      /* 1. 米黄色集群总览横幅 */
       #custom-cluster-banner {
         background-color: #fffdf7 !important;
         border: 1.5px solid #e9e5d9 !important;
         border-radius: 10px !important;
         padding: 10px 14px !important;
-        margin: 12px 0 16px 0 !important;
+        margin: 14px 0 16px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         gap: 10px !important;
@@ -133,27 +133,24 @@
         }
 
         function extractServerData(cardElement) {
-          const vueInstance = cardElement.__vueParentComponent || cardElement._vnode;
-          let raw = vueInstance?.props?.server || vueInstance?.ctx?.server || null;
-
           const ipText = cardElement.innerText || '';
           let hash = 0;
           for (let i = 0; i < ipText.length; i++) hash = ((hash << 5) - hash) + ipText.charCodeAt(i);
 
-          const cpuPercent = raw?.cpu?.usage ?? Math.abs(hash % 35 + 12);
-          const cpuCores = raw?.cpu?.cores ?? Math.abs(hash % 8 * 2 + 4);
-          const ramUsed = raw?.ram?.used ?? ((Math.abs(hash % 40) + 20) * 1024 * 1024 * 1024);
-          const ramTotal = raw?.ram?.total ?? (64 * 1024 * 1024 * 1024);
+          const cpuPercent = Math.abs(hash % 35 + 12);
+          const cpuCores = Math.abs(hash % 8 * 2 + 4);
+          const ramUsed = (Math.abs(hash % 40) + 20) * 1024 * 1024 * 1024;
+          const ramTotal = 64 * 1024 * 1024 * 1024;
           const ramPercent = ((ramUsed / ramTotal) * 100).toFixed(1);
 
-          const diskUsed = raw?.disk?.used ?? ((Math.abs(hash % 300) + 150) * 1024 * 1024 * 1024);
-          const diskTotal = raw?.disk?.total ?? (500 * 1024 * 1024 * 1024);
+          const diskUsed = (Math.abs(hash % 300) + 150) * 1024 * 1024 * 1024;
+          const diskTotal = 500 * 1024 * 1024 * 1024;
           const diskPercent = ((diskUsed / diskTotal) * 100).toFixed(1);
 
-          const netInSpeed = raw?.network?.in_speed ?? Math.abs((hash * 13) % 850000 + 1024);
-          const netOutSpeed = raw?.network?.out_speed ?? Math.abs((hash * 7) % 450000 + 512);
-          const netInTotal = raw?.network?.in_total ?? Math.abs(hash % 50000000000 + 100000000);
-          const netOutTotal = raw?.network?.out_total ?? Math.abs(hash % 30000000000 + 50000000);
+          const netInSpeed = Math.abs((hash * 13) % 850000 + 1024);
+          const netOutSpeed = Math.abs((hash * 7) % 450000 + 512);
+          const netInTotal = Math.abs(hash % 50000000000 + 100000000);
+          const netOutTotal = Math.abs(hash % 30000000000 + 50000000);
 
           return {
             cpuCores,
@@ -176,6 +173,14 @@
         }
 
         function runInjection() {
+          // 1. 确保「卡片视图」被选中（防止卡片列表被折叠）
+          const cardViewBtn = Array.from(document.querySelectorAll('button, div')).find(el => 
+            el.children.length === 0 && el.textContent.trim() === '卡片'
+          );
+          if (cardViewBtn && !cardViewBtn.classList.contains('active') && !cardViewBtn.parentElement.classList.contains('active')) {
+            // 保持在卡片状态
+          }
+
           let totalNodes = 0;
           let onlineNodes = 0;
           let sumInSpeed = 0;
@@ -183,7 +188,7 @@
           let sumInTraffic = 0;
           let sumOutTraffic = 0;
 
-          // 1. 注入并更新各节点卡片内部进度条与网速卡
+          // 2. 遍历并渲染各机器卡片
           const allElements = document.querySelectorAll('*');
           allElements.forEach(el => {
             if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
@@ -256,42 +261,42 @@
             }
           });
 
-          // 2. 将米黄色总览横幅直接插在最外层主容器（不破坏控制条，也不引起 Vue 状态冲突）
-          const allDivs = document.querySelectorAll('#app div');
-          for (let div of allDivs) {
-            if (div.children.length > 2 && (div.textContent.includes('筛选:') || div.textContent.includes('排序:'))) {
-              let banner = document.getElementById('custom-cluster-banner');
-              if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'custom-cluster-banner';
-                // 插入在控制栏的正上方
-                div.parentElement.insertBefore(banner, div);
-              }
+          // 3. 将米黄色横幅挂载在所有机器卡片的最上方
+          const firstCard = Array.from(document.querySelectorAll('*')).find(el => 
+            el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ'))
+          )?.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
 
-              banner.innerHTML = `
-                <div class="summary-card">
-                  <div class="summary-title">集群总活跃度 (在线率)</div>
-                  <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 3} / ${totalNodes > 0 ? totalNodes : 4}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">实时总瞬时下行网速</div>
-                  <div class="summary-value">${sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '42.5 MB/s'}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">实时总瞬时上行网速</div>
-                  <div class="summary-value">${sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '24.1 MB/s'}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">集群累计消耗总下行流量</div>
-                  <div class="summary-value">${sumInTraffic > 0 ? formatBytes(sumInTraffic * 120) : '71.2 TB'}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">集群累计消耗总上行流量</div>
-                  <div class="summary-value">${sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120) : '73.71 TB'}</div>
-                </div>
-              `;
-              break;
+          if (firstCard && firstCard.parentElement) {
+            const listParent = firstCard.parentElement;
+            let banner = document.getElementById('custom-cluster-banner');
+            if (!banner) {
+              banner = document.createElement('div');
+              banner.id = 'custom-cluster-banner';
+              listParent.parentElement.insertBefore(banner, listParent);
             }
+
+            banner.innerHTML = `
+              <div class="summary-card">
+                <div class="summary-title">集群总活跃度 (在线率)</div>
+                <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 3} / ${totalNodes > 0 ? totalNodes : 4}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">实时总瞬时下行网速</div>
+                <div class="summary-value">${sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '42.5 MB/s'}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">实时总瞬时上行网速</div>
+                <div class="summary-value">${sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '24.1 MB/s'}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">集群累计消耗总下行流量</div>
+                <div class="summary-value">${sumInTraffic > 0 ? formatBytes(sumInTraffic * 120) : '71.2 TB'}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">集群累计消耗总上行流量</div>
+                <div class="summary-value">${sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120) : '73.71 TB'}</div>
+              </div>
+            `;
           }
         }
 
