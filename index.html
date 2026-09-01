@@ -13,9 +13,10 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 强制解除卡片高度与裁剪限制 */
-      #app div {
-        overflow: visible !important;
+      /* 限制只在卡片内部显示监控，禁止在根页面显示 */
+      body > .custom-monitor-wrapper,
+      #app > .custom-monitor-wrapper {
+        display: none !important;
       }
 
       /* 顶部米黄色集群总览横幅 */
@@ -24,7 +25,7 @@
         border: 1.5px solid #e9e5d9 !important;
         border-radius: 10px !important;
         padding: 10px 14px !important;
-        margin: 12px 0 16px 0 !important;
+        margin: 14px 0 16px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         gap: 10px !important;
@@ -65,7 +66,7 @@
 
       /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
-        margin: 12px 0 10px 0 !important;
+        margin: 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -186,21 +187,20 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 卡片内部监控注入：直接扫描带有 X86_64 或 debian / Ubuntu 的信息行
-          var allTags = document.querySelectorAll('*');
-          for (var i = 0; i < allTags.length; i++) {
-            var el = allTags[i];
+          // 1. 精准定位每张卡片内的操作系统/架构行（Debian / Ubuntu / X86_64）
+          var infoSpans = document.querySelectorAll('span, div');
+          for (var i = 0; i < infoSpans.length; i++) {
+            var el = infoSpans[i];
             if (el.children.length === 0 && (el.textContent.indexOf('X86_64') !== -1 || el.textContent.indexOf('aarch64') !== -1)) {
               var infoRow = el.closest('div');
               if (!infoRow) continue;
 
-              // 获取整张机器卡片
-              var card = infoRow.parentElement;
-              while (card && card !== document.body) {
-                if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) break;
-                card = card.parentElement;
-              }
-              if (!card || card === document.body) card = infoRow.parentElement;
+              // 向上找最近的卡片外壳
+              var card = infoRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
+              if (!card || card.id === 'custom-cluster-banner') continue;
+
+              // 确保只在每张卡片内插入唯一一个监控条
+              var existingBox = card.querySelector('.custom-monitor-wrapper');
 
               totalNodes++;
               if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
@@ -211,9 +211,8 @@
               sumInTraffic += d.netInTotal;
               sumOutTraffic += d.netOutTotal;
 
-              // 挂在卡片信息行的下方
-              var monitorBox = infoRow.nextElementSibling;
-              if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
+              var monitorBox = existingBox;
+              if (!monitorBox) {
                 monitorBox = document.createElement('div');
                 monitorBox.className = 'custom-monitor-wrapper';
                 infoRow.insertAdjacentElement('afterend', monitorBox);
@@ -262,7 +261,13 @@
             }
           }
 
-          // 2. 顶部总览横幅注入：定位搜索/过滤控制栏
+          // 2. 清理所有脱离卡片溢出到外层的孤立 monitorBox
+          var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper');
+          for (var k = 0; k < strayBoxes.length; k++) {
+            strayBoxes[k].remove();
+          }
+
+          // 3. 顶部米黄色横幅注入
           var inputEl = document.querySelector('input');
           if (inputEl) {
             var ctrlBar = inputEl.closest('div[class*="rounded"], div[class*="border"]');
@@ -299,7 +304,7 @@
           }
         }
 
-        setInterval(runInjection, 400);
+        setInterval(runInjection, 500);
       })();
     </script>
   </body>
