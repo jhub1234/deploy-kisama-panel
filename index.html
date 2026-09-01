@@ -13,6 +13,14 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
+      /* 强制屏蔽所有脱离了卡片的孤立监控条 */
+      body > .custom-monitor-wrapper,
+      #app > .custom-monitor-wrapper,
+      #app > div > .custom-monitor-wrapper,
+      .custom-monitor-wrapper:not(:has(~ div)) {
+        display: none !important;
+      }
+
       /* 顶部米黄色集群总览横幅 */
       #custom-cluster-banner {
         background-color: #fbf8ed !important;
@@ -59,7 +67,7 @@
 
       /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
-        margin: 12px 0 10px 0 !important;
+        margin: 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -180,7 +188,7 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 定位每台卡片：直接匹配包含 "X86_64" 的这一行
+          // 1. 定位每台卡片内部（严格锁定带有 X86_64 的子行）
           var allElements = document.getElementsByTagName('*');
           for (var i = 0; i < allElements.length; i++) {
             var el = allElements[i];
@@ -188,12 +196,12 @@
               var infoRow = el.parentElement;
               if (!infoRow) continue;
               
-              // 找到这一行下面的 IP 行（下一个兄弟节点）
               var targetRow = infoRow.nextElementSibling;
               if (!targetRow) targetRow = infoRow;
 
-              var card = infoRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]') || infoRow.parentElement;
-              if (!card) continue;
+              var card = infoRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
+              // 关键防御：如果卡片容器内包含超过 1 张卡，说明选到了外层网格容器，立即终止防止底部溢出
+              if (!card || card.id === 'custom-cluster-banner' || card.querySelectorAll('[class*="rounded"]').length > 3) continue;
 
               totalNodes++;
               if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
@@ -254,7 +262,13 @@
             }
           }
 
-          // 2. 注入顶部米黄色总览横幅：直接找到带有 "搜索:" 或 "筛选:" 的控制栏父容器
+          // 2. 主动清理任何误插入到卡片外部容器的孤立条
+          var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper, [class*="grid"] > .custom-monitor-wrapper');
+          for (var k = 0; k < strayBoxes.length; k++) {
+            strayBoxes[k].remove();
+          }
+
+          // 3. 顶部米黄色总览横幅注入
           for (var j = 0; j < allElements.length; j++) {
             var item = allElements[j];
             if (item.children.length === 0 && item.textContent && item.textContent.indexOf('筛选:') !== -1) {
