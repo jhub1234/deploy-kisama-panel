@@ -13,26 +13,19 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 限制只在卡片内部显示监控，禁止在根页面显示 */
-      body > .custom-monitor-wrapper,
-      #app > .custom-monitor-wrapper {
-        display: none !important;
-      }
-
       /* 顶部米黄色集群总览横幅 */
       #custom-cluster-banner {
-        background-color: #fffdf7 !important;
-        border: 1.5px solid #e9e5d9 !important;
-        border-radius: 10px !important;
+        background-color: #fbf8ed !important;
+        border: 1px solid #e7dec6 !important;
+        border-radius: 8px !important;
         padding: 10px 14px !important;
-        margin: 14px 0 16px 0 !important;
+        margin: 14px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         gap: 10px !important;
         box-sizing: border-box !important;
         width: 100% !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
       }
 
       @media (max-width: 900px) {
@@ -42,8 +35,8 @@
       }
 
       .summary-card {
-        background-color: #f7f5ed !important;
-        border: 1px solid #ece7db !important;
+        background-color: #f3ecd8 !important;
+        border: 1px solid #e2d7be !important;
         border-radius: 6px !important;
         padding: 8px 10px !important;
         display: flex !important;
@@ -52,7 +45,7 @@
       }
       .summary-title {
         font-size: 11px !important;
-        color: #475569 !important;
+        color: #57534e !important;
         margin-bottom: 4px !important;
         font-weight: 700 !important;
         white-space: nowrap !important;
@@ -60,13 +53,13 @@
       .summary-value {
         font-size: 15px !important;
         font-weight: 800 !important;
-        color: #0f172a !important;
+        color: #1c1917 !important;
         letter-spacing: 0.5px !important;
       }
 
       /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
-        margin: 10px 0 !important;
+        margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -187,20 +180,20 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 精准定位每张卡片内的操作系统/架构行（Debian / Ubuntu / X86_64）
-          var infoSpans = document.querySelectorAll('span, div');
-          for (var i = 0; i < infoSpans.length; i++) {
-            var el = infoSpans[i];
-            if (el.children.length === 0 && (el.textContent.indexOf('X86_64') !== -1 || el.textContent.indexOf('aarch64') !== -1)) {
-              var infoRow = el.closest('div');
+          // 1. 定位每台卡片：直接匹配包含 "X86_64" 的这一行
+          var allElements = document.getElementsByTagName('*');
+          for (var i = 0; i < allElements.length; i++) {
+            var el = allElements[i];
+            if (el.children.length === 0 && el.textContent && el.textContent.indexOf('X86_64') !== -1) {
+              var infoRow = el.parentElement;
               if (!infoRow) continue;
+              
+              // 找到这一行下面的 IP 行（下一个兄弟节点）
+              var targetRow = infoRow.nextElementSibling;
+              if (!targetRow) targetRow = infoRow;
 
-              // 向上找最近的卡片外壳
-              var card = infoRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
-              if (!card || card.id === 'custom-cluster-banner') continue;
-
-              // 确保只在每张卡片内插入唯一一个监控条
-              var existingBox = card.querySelector('.custom-monitor-wrapper');
+              var card = infoRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]') || infoRow.parentElement;
+              if (!card) continue;
 
               totalNodes++;
               if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
@@ -211,11 +204,11 @@
               sumInTraffic += d.netInTotal;
               sumOutTraffic += d.netOutTotal;
 
-              var monitorBox = existingBox;
-              if (!monitorBox) {
+              var monitorBox = targetRow.nextElementSibling;
+              if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
                 monitorBox = document.createElement('div');
                 monitorBox.className = 'custom-monitor-wrapper';
-                infoRow.insertAdjacentElement('afterend', monitorBox);
+                targetRow.insertAdjacentElement('afterend', monitorBox);
               }
 
               monitorBox.innerHTML = 
@@ -261,45 +254,42 @@
             }
           }
 
-          // 2. 清理所有脱离卡片溢出到外层的孤立 monitorBox
-          var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper');
-          for (var k = 0; k < strayBoxes.length; k++) {
-            strayBoxes[k].remove();
-          }
+          // 2. 注入顶部米黄色总览横幅：直接找到带有 "搜索:" 或 "筛选:" 的控制栏父容器
+          for (var j = 0; j < allElements.length; j++) {
+            var item = allElements[j];
+            if (item.children.length === 0 && item.textContent && item.textContent.indexOf('筛选:') !== -1) {
+              var ctrlBar = item.closest('div[class*="rounded"], div[class*="border"]') || item.parentElement;
+              if (ctrlBar && ctrlBar.parentElement) {
+                var banner = document.getElementById('custom-cluster-banner');
+                if (!banner) {
+                  banner = document.createElement('div');
+                  banner.id = 'custom-cluster-banner';
+                  ctrlBar.parentElement.insertBefore(banner, ctrlBar);
+                }
 
-          // 3. 顶部米黄色横幅注入
-          var inputEl = document.querySelector('input');
-          if (inputEl) {
-            var ctrlBar = inputEl.closest('div[class*="rounded"], div[class*="border"]');
-            if (ctrlBar && ctrlBar.parentElement) {
-              var banner = document.getElementById('custom-cluster-banner');
-              if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'custom-cluster-banner';
-                ctrlBar.parentElement.insertBefore(banner, ctrlBar);
+                banner.innerHTML = 
+                  '<div class="summary-card">' +
+                    '<div class="summary-title">集群总活跃度 (在线率)</div>' +
+                    '<div class="summary-value">' + (onlineNodes > 0 ? onlineNodes : 4) + ' / ' + (totalNodes > 0 ? totalNodes : 4) + '</div>' +
+                  '</div>' +
+                  '<div class="summary-card">' +
+                    '<div class="summary-title">实时总瞬时下行网速</div>' +
+                    '<div class="summary-value">' + (sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '4.6 MB/s') + '</div>' +
+                  '</div>' +
+                  '<div class="summary-card">' +
+                    '<div class="summary-title">实时总瞬时上行网速</div>' +
+                    '<div class="summary-value">' + (sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '2.1 MB/s') + '</div>' +
+                  '</div>' +
+                  '<div class="summary-card">' +
+                    '<div class="summary-title">集群累计消耗总下行流量</div>' +
+                    '<div class="summary-value">' + (sumInTraffic > 0 ? formatBytes(sumInTraffic * 120, false) : '10.2 TB') + '</div>' +
+                  '</div>' +
+                  '<div class="summary-card">' +
+                    '<div class="summary-title">集群累计消耗总上行流量</div>' +
+                    '<div class="summary-value">' + (sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120, false) : '6.9 TB') + '</div>' +
+                  '</div>';
+                break;
               }
-
-              banner.innerHTML = 
-                '<div class="summary-card">' +
-                  '<div class="summary-title">集群总活跃度 (在线率)</div>' +
-                  '<div class="summary-value">' + (onlineNodes > 0 ? onlineNodes : 4) + ' / ' + (totalNodes > 0 ? totalNodes : 4) + '</div>' +
-                '</div>' +
-                '<div class="summary-card">' +
-                  '<div class="summary-title">实时总瞬时下行网速</div>' +
-                  '<div class="summary-value">' + (sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '4.6 MB/s') + '</div>' +
-                '</div>' +
-                '<div class="summary-card">' +
-                  '<div class="summary-title">实时总瞬时上行网速</div>' +
-                  '<div class="summary-value">' + (sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '2.1 MB/s') + '</div>' +
-                '</div>' +
-                '<div class="summary-card">' +
-                  '<div class="summary-title">集群累计消耗总下行流量</div>' +
-                  '<div class="summary-value">' + (sumInTraffic > 0 ? formatBytes(sumInTraffic * 120, false) : '10.2 TB') + '</div>' +
-                '</div>' +
-                '<div class="summary-card">' +
-                  '<div class="summary-title">集群累计消耗总上行流量</div>' +
-                  '<div class="summary-value">' + (sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120, false) : '6.9 TB') + '</div>' +
-                '</div>';
             }
           }
         }
