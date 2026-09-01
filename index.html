@@ -4,21 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <title>Kisama</title>
     <script type="module" crossorigin src="/assets/index-DhztsfLa.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
-    <!-- 1. 注入你截图中的复古网速卡片样式 -->
+    <!-- 深色主题网速模块样式 -->
     <style>
       .custom-speed-box {
-        background-color: #f7f5ed !important;
-        border: 1px solid #ece7db !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px !important;
         padding: 8px 12px !important;
-        margin: 10px 0 !important;
+        margin: 12px 0 10px 0 !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 8px !important;
@@ -27,73 +29,76 @@
       .speed-col-title {
         font-size: 11px !important;
         font-weight: 700 !important;
-        color: #1e293b !important;
         display: flex !important;
         align-items: center !important;
         gap: 4px !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 3px !important;
       }
+      .title-down { color: #38bdf8 !important; }
+      .title-up { color: #f43f5e !important; }
+      
       .speed-col-item {
         font-size: 11px !important;
-        color: #475569 !important;
-        line-height: 1.4 !important;
+        color: #94a3b8 !important;
+        line-height: 1.5 !important;
       }
       .speed-col-item b {
-        color: #0f172a !important;
+        color: #f1f5f9 !important;
       }
     </style>
   </head>
   <body>
     <div id="app"></div>
 
-    <!-- 2. 注入动态插入网速模块的脚本 -->
     <script>
       (function() {
-        // 格式化速度单位
-        function formatBytes(bytes, isSpeed = false) {
-          if (!bytes || bytes === 0) return isSpeed ? '0 B/s' : '0 B';
-          const k = 1024;
-          const sizes = isSpeed ? ['B/s', 'KB/s', 'MB/s', 'GB/s'] : ['B', 'KB', 'MB', 'GB', 'TB'];
-          const i = Math.floor(Math.log(bytes) / Math.log(k));
-          return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
-        }
-
-        // 监听并动态把网速卡片插入到每个卡片的磁盘条下方
         function injectSpeedCards() {
-          // 查找 Kisama 生成的节点卡片
-          const cards = document.querySelectorAll('.card, [class*="server-card"], #app > div > div');
-          
-          cards.forEach((card, index) => {
+          // 精准定位：通过查找包含 ONLINE/OFFLINE 徽标的卡片容器
+          const onlineBadges = Array.from(document.querySelectorAll('*')).filter(el => 
+            el.children.length === 0 && (el.textContent.includes('ONLINE') || el.textContent.includes('OFFLINE'))
+          );
+
+          onlineBadges.forEach(badge => {
+            // 向上找到机器卡片的根容器
+            const card = badge.closest('div[class*="grid"] > div, div[class*="flex-1"], div[class*="rounded"]');
+            if (!card) return;
+
             // 避免重复插入
             if (card.querySelector('.custom-speed-box')) return;
 
-            // 抓取当前节点已有的网速数据（如果 Kisama 节点数据绑定在全局或属性上）
-            // 默认提供动态展示模板
+            // 定位卡片底部的操作按钮行（底部的终端、编辑、删除等图标）
+            const bottomIconsRow = card.querySelector('div:has(button), div:has(svg:last-child)');
+
             const speedBox = document.createElement('div');
             speedBox.className = 'custom-speed-box';
             speedBox.innerHTML = `
               <div>
-                <div class="speed-col-title">📥 DOWN (下载)</div>
+                <div class="speed-col-title title-down">📥 DOWN (下载)</div>
                 <div class="speed-col-item">速: <b class="net-down-speed">-- B/s</b></div>
                 <div class="speed-col-item">量: <span class="net-down-total">-- MB</span></div>
               </div>
               <div>
-                <div class="speed-col-title">📤 UP (上传)</div>
+                <div class="speed-col-title title-up">📤 UP (上传)</div>
                 <div class="speed-col-item">速: <b class="net-up-speed">-- B/s</b></div>
                 <div class="speed-col-item">量: <span class="net-up-total">-- MB</span></div>
               </div>
             `;
 
-            // 插入到卡片底部或第三个进度条下方
-            card.appendChild(speedBox);
+            // 插入在操作栏前面，或者直接追加在卡片内容区
+            if (bottomIconsRow && bottomIconsRow.parentElement === card) {
+              card.insertBefore(speedBox, bottomIconsRow);
+            } else {
+              card.appendChild(speedBox);
+            }
           });
         }
 
-        // 页面渲染完成后执行注入
-        const observer = new MutationObserver(() => {
-          injectSpeedCards();
-        });
+        // 持续监听 Vue 动态渲染
+        const observer = new MutationObserver(() => injectSpeedCards());
         observer.observe(document.getElementById('app'), { childList: true, subtree: true });
+        
+        // 初始触发
+        setTimeout(injectSpeedCards, 500);
       })();
     </script>
   </body>
