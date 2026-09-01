@@ -13,38 +13,30 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 1. 彻底隐藏原来的这一整排控制栏 (搜索/筛选/排序/视图切换) */
-      div:has(> input[placeholder*="名称"]),
-      div:has(> input[placeholder*="IP"]),
-      div:has(> input[type="text"]) {
-        display: none !important;
-      }
-
-      /* 2. 1:1 复刻米黄色集群总览卡片栏 */
-      #cluster-summary-bar {
-        background-color: #f7f3e8 !important;
-        border: 1px solid #e5dec9 !important;
+      /* 1:1 复刻米黄色集群总览横幅 */
+      .cluster-summary-bar {
+        background-color: #fffdf7 !important;
+        border: 1px solid #ebe5d8 !important;
         border-radius: 8px !important;
         padding: 10px 14px !important;
-        margin: 18px 0 !important;
+        margin: 12px 0 16px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-        gap: 12px !important;
+        gap: 10px !important;
         box-sizing: border-box !important;
         width: 100% !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
       }
 
       @media (max-width: 900px) {
-        #cluster-summary-bar {
+        .cluster-summary-bar {
           grid-template-columns: repeat(2, 1fr) !important;
         }
       }
 
       .summary-card {
-        background-color: #f0ebd8 !important;
-        border: 1px solid #e2dac2 !important;
+        background-color: #f7f4ea !important;
+        border: 1px solid #e8e1cf !important;
         border-radius: 6px !important;
         padding: 8px 12px !important;
         display: flex !important;
@@ -54,7 +46,7 @@
       .summary-title {
         font-size: 11px !important;
         color: #57534e !important;
-        margin-bottom: 5px !important;
+        margin-bottom: 4px !important;
         font-weight: 700 !important;
         white-space: nowrap !important;
       }
@@ -65,7 +57,7 @@
         letter-spacing: 0.5px !important;
       }
 
-      /* 3. 卡片内实时状态条与网速模块 */
+      /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
         margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
@@ -190,7 +182,7 @@
           let sumInTraffic = 0;
           let sumOutTraffic = 0;
 
-          // 1. 遍历并装载各机器卡片内部监控
+          // 1. 遍历各机器卡片并注入进度条与网速
           const allElements = document.querySelectorAll('*');
           allElements.forEach(el => {
             if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
@@ -263,22 +255,20 @@
             }
           });
 
-          // 2. 插入顶部【集群总览横幅】（直接定位卡片容器前）
-          const firstCard = Array.from(document.querySelectorAll('*')).find(el => 
-            el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ'))
-          )?.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
-
-          if (firstCard && firstCard.parentElement) {
-            const cardGridContainer = firstCard.parentElement;
-
-            let summaryBar = document.getElementById('cluster-summary-bar');
-            if (!summaryBar) {
-              summaryBar = document.createElement('div');
-              summaryBar.id = 'cluster-summary-bar';
-              cardGridContainer.parentElement.insertBefore(summaryBar, cardGridContainer);
+          // 2. 找到那一整条包含「筛选:」「排序:」的深色控制栏容器
+          const allDivs = document.querySelectorAll('#app div');
+          let targetControlBar = null;
+          for (let div of allDivs) {
+            if (div.children.length > 2 && div.textContent.includes('筛选:') && div.textContent.includes('排序:')) {
+              targetControlBar = div;
+              break;
             }
+          }
 
-            summaryBar.innerHTML = `
+          if (targetControlBar) {
+            // 直接把原来的深色控制栏改造成米黄色统计横幅
+            targetControlBar.className = 'cluster-summary-bar';
+            targetControlBar.innerHTML = `
               <div class="summary-card">
                 <div class="summary-title">集群总活跃度 (在线率)</div>
                 <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 3} / ${totalNodes > 0 ? totalNodes : 4}</div>
@@ -303,7 +293,7 @@
           }
         }
 
-        setInterval(runInjection, 800);
+        setInterval(runInjection, 500);
       })();
     </script>
   </body>
