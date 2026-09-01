@@ -13,22 +13,29 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 顶部集群汇总横幅 (1:1复刻米黄/复古暗调质感) */
+      /* 1. 彻底隐藏原来的这一整排控制栏 (搜索/筛选/排序/视图切换) */
+      div:has(> input[placeholder*="名称"]),
+      div:has(> input[placeholder*="IP"]),
+      div:has(> input[type="text"]) {
+        display: none !important;
+      }
+
+      /* 2. 1:1 复刻米黄色集群总览卡片栏 */
       #cluster-summary-bar {
-        background-color: #fffdf7 !important;
-        border: 1.5px solid #e9e5d9 !important;
-        border-radius: 10px !important;
+        background-color: #f7f3e8 !important;
+        border: 1px solid #e5dec9 !important;
+        border-radius: 8px !important;
         padding: 10px 14px !important;
-        margin: 16px 0 !important;
+        margin: 18px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-        gap: 10px !important;
+        gap: 12px !important;
         box-sizing: border-box !important;
         width: 100% !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
       }
-      
+
       @media (max-width: 900px) {
         #cluster-summary-bar {
           grid-template-columns: repeat(2, 1fr) !important;
@@ -36,29 +43,29 @@
       }
 
       .summary-card {
-        background-color: #f7f5ed !important;
-        border: 1px solid #ece7db !important;
+        background-color: #f0ebd8 !important;
+        border: 1px solid #e2dac2 !important;
         border-radius: 6px !important;
-        padding: 8px 10px !important;
+        padding: 8px 12px !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
       }
       .summary-title {
         font-size: 11px !important;
-        color: #475569 !important;
-        margin-bottom: 4px !important;
+        color: #57534e !important;
+        margin-bottom: 5px !important;
         font-weight: 700 !important;
         white-space: nowrap !important;
       }
       .summary-value {
         font-size: 15px !important;
         font-weight: 800 !important;
-        color: #0f172a !important;
+        color: #1c1917 !important;
         letter-spacing: 0.5px !important;
       }
 
-      /* 单节点卡片内部监控条 */
+      /* 3. 卡片内实时状态条与网速模块 */
       .custom-monitor-wrapper {
         margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
@@ -183,7 +190,7 @@
           let sumInTraffic = 0;
           let sumOutTraffic = 0;
 
-          // 1. 渲染各机器卡片内部
+          // 1. 遍历并装载各机器卡片内部监控
           const allElements = document.querySelectorAll('*');
           allElements.forEach(el => {
             if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
@@ -256,8 +263,7 @@
             }
           });
 
-          // 2. 插入顶部【集群总览横幅】（直接定位卡片列表外部的父级网格容器上方）
-          // 找到第一台卡片的直接父容器（即卡片列表容器）
+          // 2. 插入顶部【集群总览横幅】（直接定位卡片容器前）
           const firstCard = Array.from(document.querySelectorAll('*')).find(el => 
             el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ'))
           )?.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
@@ -269,7 +275,6 @@
             if (!summaryBar) {
               summaryBar = document.createElement('div');
               summaryBar.id = 'cluster-summary-bar';
-              // 关键修复：插入在卡片网格容器的正前方
               cardGridContainer.parentElement.insertBefore(summaryBar, cardGridContainer);
             }
 
