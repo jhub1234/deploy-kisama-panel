@@ -13,25 +13,13 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 隐藏原版控制栏的自带内容 */
-      .hide-original-control > * {
-        display: none !important;
-      }
-      .hide-original-control {
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        min-height: 0 !important;
-      }
-
-      /* 顶部米黄色集群总览横幅 */
-      #cluster-summary-bar {
+      /* 1. 米黄色独立集群总览横幅 */
+      #custom-cluster-banner {
         background-color: #fffdf7 !important;
         border: 1.5px solid #e9e5d9 !important;
         border-radius: 10px !important;
         padding: 10px 14px !important;
-        margin: 14px 0 16px 0 !important;
+        margin: 12px 0 16px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         gap: 10px !important;
@@ -42,7 +30,7 @@
       }
 
       @media (max-width: 900px) {
-        #cluster-summary-bar {
+        #custom-cluster-banner {
           grid-template-columns: repeat(2, 1fr) !important;
         }
       }
@@ -70,7 +58,7 @@
         letter-spacing: 0.5px !important;
       }
 
-      /* 单节点卡片内部监控条 */
+      /* 2. 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
         margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
@@ -195,7 +183,7 @@
           let sumInTraffic = 0;
           let sumOutTraffic = 0;
 
-          // 1. 遍历各机器卡片并注入进度条与网速
+          // 1. 注入并更新各节点卡片内部进度条与网速卡
           const allElements = document.querySelectorAll('*');
           allElements.forEach(el => {
             if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
@@ -268,22 +256,19 @@
             }
           });
 
-          // 2. 隐藏原控制栏内容并在外部单独挂载横幅（不破坏 Vue 的 DOM 节点）
+          // 2. 将米黄色总览横幅直接插在最外层主容器（不破坏控制条，也不引起 Vue 状态冲突）
           const allDivs = document.querySelectorAll('#app div');
           for (let div of allDivs) {
             if (div.children.length > 2 && (div.textContent.includes('筛选:') || div.textContent.includes('排序:'))) {
-              if (!div.classList.contains('hide-original-control')) {
-                div.classList.add('hide-original-control');
+              let banner = document.getElementById('custom-cluster-banner');
+              if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'custom-cluster-banner';
+                // 插入在控制栏的正上方
+                div.parentElement.insertBefore(banner, div);
               }
 
-              let summaryBar = document.getElementById('cluster-summary-bar');
-              if (!summaryBar) {
-                summaryBar = document.createElement('div');
-                summaryBar.id = 'cluster-summary-bar';
-                div.parentElement.insertBefore(summaryBar, div);
-              }
-
-              summaryBar.innerHTML = `
+              banner.innerHTML = `
                 <div class="summary-card">
                   <div class="summary-title">集群总活跃度 (在线率)</div>
                   <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 3} / ${totalNodes > 0 ? totalNodes : 4}</div>
