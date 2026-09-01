@@ -13,11 +13,11 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 强制屏蔽所有脱离了卡片的孤立监控条 */
+      /* 强制屏蔽所有卡片外部的孤立监控条 */
       body > .custom-monitor-wrapper,
       #app > .custom-monitor-wrapper,
       #app > div > .custom-monitor-wrapper,
-      .custom-monitor-wrapper:not(:has(~ div)) {
+      .grid > .custom-monitor-wrapper {
         display: none !important;
       }
 
@@ -67,7 +67,7 @@
 
       /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
-        margin: 10px 0 !important;
+        margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -188,23 +188,19 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 定位每台卡片内部（严格锁定带有 X86_64 的子行）
-          var allElements = document.getElementsByTagName('*');
-          for (var i = 0; i < allElements.length; i++) {
-            var el = allElements[i];
-            if (el.children.length === 0 && el.textContent && el.textContent.indexOf('X86_64') !== -1) {
-              var infoRow = el.parentElement;
-              if (!infoRow) continue;
-              
-              var targetRow = infoRow.nextElementSibling;
-              if (!targetRow) targetRow = infoRow;
-
-              var card = infoRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
-              // 关键防御：如果卡片容器内包含超过 1 张卡，说明选到了外层网格容器，立即终止防止底部溢出
-              if (!card || card.id === 'custom-cluster-banner' || card.querySelectorAll('[class*="rounded"]').length > 3) continue;
+          // 1. 定位每台卡片：直接扫描卡片底部的操作按钮容器（带有多个操作小图标的 div）
+          var allDivs = document.querySelectorAll('div');
+          for (var i = 0; i < allDivs.length; i++) {
+            var div = allDivs[i];
+            // 匹配卡片底部的按钮工具行
+            if (div.children.length >= 3 && div.querySelectorAll('svg, button, i, span').length >= 4) {
+              var card = div.parentElement;
+              // 必须是具体的单台机器卡片（包含 ONLINE 或 OFFLINE）
+              if (!card || !card.innerText || (card.innerText.indexOf('ONLINE') === -1 && card.innerText.indexOf('OFFLINE') === -1)) continue;
+              if (card.id === 'custom-cluster-banner') continue;
 
               totalNodes++;
-              if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
+              if (card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
 
               var d = extractServerData(card);
               sumInSpeed += d.netInSpeed;
@@ -212,11 +208,12 @@
               sumInTraffic += d.netInTotal;
               sumOutTraffic += d.netOutTotal;
 
-              var monitorBox = targetRow.nextElementSibling;
+              // 精准插在底部按钮栏的正上方
+              var monitorBox = div.previousElementSibling;
               if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
                 monitorBox = document.createElement('div');
                 monitorBox.className = 'custom-monitor-wrapper';
-                targetRow.insertAdjacentElement('afterend', monitorBox);
+                card.insertBefore(monitorBox, div);
               }
 
               monitorBox.innerHTML = 
@@ -250,27 +247,31 @@
                 '<div class="custom-speed-box">' +
                   '<div>' +
                     '<div class="speed-col-title title-down">📥 DOWN (下载)</div>' +
-                    '<div class="speed-col-item">速: <b>' + d.netInSpeedStr + '</b></div>' +
-                    '<div class="speed-col-item">量: <span>' + d.netInTotalStr + '</span></div>' +
+                    '<div class="speed-col-item">速: <b>${d.netInSpeedStr}</b></div>' +
+                    '<div class="speed-col-item">量: <span>${d.netInTotalStr}</span></div>' +
                   '</div>' +
                   '<div>' +
                     '<div class="speed-col-title title-up">📤 UP (上传)</div>' +
-                    '<div class="speed-col-item">速: <b>' + d.netOutSpeedStr + '</b></div>' +
-                    '<div class="speed-col-item">量: <span>' + d.netOutTotalStr + '</span></div>' +
+                    '<div class="speed-col-item">速: <b>${d.netOutSpeedStr}</b></div>' +
+                    '<div class="speed-col-item">量: <span>${d.netOutTotalStr}</span></div>' +
                   '</div>' +
-                '</div>';
+                '</div>'
+                .replace('${d.netInSpeedStr}', d.netInSpeedStr)
+                .replace('${d.netInTotalStr}', d.netInTotalStr)
+                .replace('${d.netOutSpeedStr}', d.netOutSpeedStr)
+                .replace('${d.netOutTotalStr}', d.netOutTotalStr);
             }
           }
 
-          // 2. 主动清理任何误插入到卡片外部容器的孤立条
-          var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper, [class*="grid"] > .custom-monitor-wrapper');
+          // 2. 清理外部可能残留的孤立条
+          var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper');
           for (var k = 0; k < strayBoxes.length; k++) {
             strayBoxes[k].remove();
           }
 
-          // 3. 顶部米黄色总览横幅注入
-          for (var j = 0; j < allElements.length; j++) {
-            var item = allElements[j];
+          // 3. 顶部米黄色总览横幅更新
+          for (var j = 0; j < allDivs.length; j++) {
+            var item = allDivs[j];
             if (item.children.length === 0 && item.textContent && item.textContent.indexOf('筛选:') !== -1) {
               var ctrlBar = item.closest('div[class*="rounded"], div[class*="border"]') || item.parentElement;
               if (ctrlBar && ctrlBar.parentElement) {
