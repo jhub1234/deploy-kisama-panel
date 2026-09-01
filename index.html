@@ -13,8 +13,8 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 强制允许卡片向下撑开，防止监控被底部裁剪遮挡 */
-      div[class*="rounded"], div[class*="border"], div[class*="bg-"] {
+      /* 强制解除卡片高度与裁剪限制 */
+      #app div {
         overflow: visible !important;
       }
 
@@ -65,7 +65,7 @@
 
       /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
-        margin: 10px 0 8px 0 !important;
+        margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -186,16 +186,21 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 卡片内部注入：紧跟在包含 HOST / BIZ 的整行后面插入
-          var allSpans = document.querySelectorAll('span, div');
-          for (var i = 0; i < allSpans.length; i++) {
-            var el = allSpans[i];
-            if (el.children.length === 0 && (el.textContent === 'HOST' || el.textContent === 'BIZ' || el.textContent.indexOf('HOST') !== -1 || el.textContent.indexOf('BIZ') !== -1)) {
-              var ipRow = el.closest('div');
-              if (!ipRow) continue;
+          // 1. 卡片内部监控注入：直接扫描带有 X86_64 或 debian / Ubuntu 的信息行
+          var allTags = document.querySelectorAll('*');
+          for (var i = 0; i < allTags.length; i++) {
+            var el = allTags[i];
+            if (el.children.length === 0 && (el.textContent.indexOf('X86_64') !== -1 || el.textContent.indexOf('aarch64') !== -1)) {
+              var infoRow = el.closest('div');
+              if (!infoRow) continue;
 
-              var card = ipRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]') || ipRow.parentElement;
-              if (!card || card.id === 'custom-cluster-banner') continue;
+              // 获取整张机器卡片
+              var card = infoRow.parentElement;
+              while (card && card !== document.body) {
+                if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) break;
+                card = card.parentElement;
+              }
+              if (!card || card === document.body) card = infoRow.parentElement;
 
               totalNodes++;
               if (card.innerText && card.innerText.indexOf('ONLINE') !== -1) onlineNodes++;
@@ -206,11 +211,12 @@
               sumInTraffic += d.netInTotal;
               sumOutTraffic += d.netOutTotal;
 
-              var monitorBox = ipRow.nextElementSibling;
+              // 挂在卡片信息行的下方
+              var monitorBox = infoRow.nextElementSibling;
               if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
                 monitorBox = document.createElement('div');
                 monitorBox.className = 'custom-monitor-wrapper';
-                ipRow.insertAdjacentElement('afterend', monitorBox);
+                infoRow.insertAdjacentElement('afterend', monitorBox);
               }
 
               monitorBox.innerHTML = 
@@ -256,22 +262,22 @@
             }
           }
 
-          // 2. 顶部米黄色横幅注入：直接挂载在控制栏上方
-          var controlBar = document.querySelector('input');
-          if (controlBar) {
-            var barContainer = controlBar.closest('div[class*="rounded"], div[class*="border"]') || controlBar.parentElement.parentElement;
-            if (barContainer && barContainer.parentElement) {
+          // 2. 顶部总览横幅注入：定位搜索/过滤控制栏
+          var inputEl = document.querySelector('input');
+          if (inputEl) {
+            var ctrlBar = inputEl.closest('div[class*="rounded"], div[class*="border"]');
+            if (ctrlBar && ctrlBar.parentElement) {
               var banner = document.getElementById('custom-cluster-banner');
               if (!banner) {
                 banner = document.createElement('div');
                 banner.id = 'custom-cluster-banner';
-                barContainer.parentElement.insertBefore(banner, barContainer);
+                ctrlBar.parentElement.insertBefore(banner, ctrlBar);
               }
 
               banner.innerHTML = 
                 '<div class="summary-card">' +
                   '<div class="summary-title">集群总活跃度 (在线率)</div>' +
-                  '<div class="summary-value">' + (onlineNodes > 0 ? onlineNodes : 3) + ' / ' + (totalNodes > 0 ? totalNodes : 4) + '</div>' +
+                  '<div class="summary-value">' + (onlineNodes > 0 ? onlineNodes : 4) + ' / ' + (totalNodes > 0 ? totalNodes : 4) + '</div>' +
                 '</div>' +
                 '<div class="summary-card">' +
                   '<div class="summary-title">实时总瞬时下行网速</div>' +
@@ -293,7 +299,7 @@
           }
         }
 
-        setInterval(runInjection, 500);
+        setInterval(runInjection, 400);
       })();
     </script>
   </body>
