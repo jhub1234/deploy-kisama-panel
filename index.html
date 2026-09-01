@@ -13,15 +13,15 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 完整监控扩展容器 */
+      /* 监控与网速整体卡片 */
       .custom-monitor-wrapper {
         margin: 12px 0 8px 0 !important;
         font-family: 'JetBrains Mono', -apple-system, BlinkMacSystemFont, sans-serif !important;
         width: 100% !important;
-        box-sizing: border-box !important;
+        display: block !important;
       }
 
-      /* 进度条条目 */
+      /* CPU / RAM / Disk 进度条 */
       .metric-line {
         margin-bottom: 8px !important;
       }
@@ -30,7 +30,7 @@
         justify-content: space-between !important;
         font-size: 11.5px !important;
         font-weight: 600 !important;
-        color: #e2e8f0 !important;
+        color: #cbd5e1 !important;
         margin-bottom: 4px !important;
       }
       .metric-bar-bg {
@@ -43,15 +43,14 @@
       .metric-bar-fill {
         height: 100% !important;
         border-radius: 999px !important;
-        transition: width 0.4s ease !important;
       }
       .fill-cpu { background-color: #10b981 !important; }
       .fill-ram { background-color: #3b82f6 !important; }
       .fill-disk { background-color: #6366f1 !important; }
 
-      /* 下方网速双栏卡片 */
+      /* 下方网速双栏模块 */
       .custom-speed-box {
-        background-color: rgba(255, 255, 255, 0.03) !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px !important;
         padding: 8px 12px !important;
@@ -63,9 +62,6 @@
       .speed-col-title {
         font-size: 11px !important;
         font-weight: 700 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 4px !important;
         margin-bottom: 2px !important;
       }
       .title-down { color: #38bdf8 !important; }
@@ -87,93 +83,83 @@
     <script>
       (function() {
         function injectMonitorData() {
-          // 查找所有节点中的系统架构或 IP 元素
-          const ipOrArchNodes = Array.from(document.querySelectorAll('*')).filter(el => 
-            el.children.length === 0 && (
-              el.textContent.includes('X86_64') || 
-              el.textContent.includes('aarch64') || 
-              el.textContent.includes('[HOST]') || 
-              el.textContent.includes('[BIZ]')
-            )
-          );
+          // 自动勾选右上角「预览常驻」以激活原生监控数据流（若有）
+          const previewCheckbox = Array.from(document.querySelectorAll('input[type="checkbox"]')).find(cb => {
+            return cb.parentElement && cb.parentElement.textContent.includes('预览');
+          });
+          if (previewCheckbox && !previewCheckbox.checked) {
+            previewCheckbox.click();
+          }
 
-          ipOrArchNodes.forEach(node => {
-            // 获取机器卡片的大容器
-            const card = node.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
-            if (!card || card.querySelector('.custom-monitor-wrapper')) return;
+          // 核心查找法：找到包含操作小图标（终端、编辑、刷新等）的所有容器
+          const allDivs = document.querySelectorAll('#app div');
+          allDivs.forEach(div => {
+            // 通过卡片特征：含有多个 svg 操作按钮，且属于卡片底栏
+            const svgs = div.querySelectorAll('svg');
+            if (svgs.length >= 4 && !div.classList.contains('injected-flag')) {
+              const card = div.parentElement;
+              if (!card || card.querySelector('.custom-monitor-wrapper')) return;
 
-            // 查找底部操作图标栏
-            const bottomIcons = Array.from(card.querySelectorAll('div')).find(div => 
-              div.querySelectorAll('svg, button, i').length >= 3
-            );
+              div.classList.add('injected-flag');
 
-            // 创建完整监控信息元素（CPU + RAM + 磁盘 + 网速卡）
-            const monitorBox = document.createElement('div');
-            monitorBox.className = 'custom-monitor-wrapper';
-            monitorBox.innerHTML = `
-              <!-- CPU 负载 -->
-              <div class="metric-line">
-                <div class="metric-header">
-                  <span>CPU 负载</span>
-                  <span class="cpu-text">31.0%</span>
+              const monitorBox = document.createElement('div');
+              monitorBox.className = 'custom-monitor-wrapper';
+              monitorBox.innerHTML = `
+                <!-- CPU 负载 -->
+                <div class="metric-line">
+                  <div class="metric-header">
+                    <span>CPU 负载 (20核)</span>
+                    <span>31.0%</span>
+                  </div>
+                  <div class="metric-bar-bg">
+                    <div class="metric-bar-fill fill-cpu" style="width: 31%;"></div>
+                  </div>
                 </div>
-                <div class="metric-bar-bg">
-                  <div class="metric-bar-fill fill-cpu" style="width: 31%;"></div>
-                </div>
-              </div>
 
-              <!-- 内存占用 (RAM) -->
-              <div class="metric-line">
-                <div class="metric-header">
-                  <span>内存占用 (RAM)</span>
-                  <span class="ram-text">1.85 GB / 3.82 GB (48.4%)</span>
+                <!-- 内存占用 (RAM) -->
+                <div class="metric-line">
+                  <div class="metric-header">
+                    <span>内存占用 (RAM)</span>
+                    <span>89.65 GB / 125.58 GB (71.4%)</span>
+                  </div>
+                  <div class="metric-bar-bg">
+                    <div class="metric-bar-fill fill-ram" style="width: 71.4%;"></div>
+                  </div>
                 </div>
-                <div class="metric-bar-bg">
-                  <div class="metric-bar-fill fill-ram" style="width: 48.4%;"></div>
-                </div>
-              </div>
 
-              <!-- 磁盘存储 (Disk) -->
-              <div class="metric-line">
-                <div class="metric-header">
-                  <span>磁盘存储 (Disk)</span>
-                  <span class="disk-text">18.42 GB / 39.20 GB (47.0%)</span>
+                <!-- 磁盘存储 (Disk) -->
+                <div class="metric-line">
+                  <div class="metric-header">
+                    <span>磁盘存储 (Disk)</span>
+                    <span>575.74 GB / 931.18 GB (61.8%)</span>
+                  </div>
+                  <div class="metric-bar-bg">
+                    <div class="metric-bar-fill fill-disk" style="width: 61.8%;"></div>
+                  </div>
                 </div>
-                <div class="metric-bar-bg">
-                  <div class="metric-bar-fill fill-disk" style="width: 47.0%;"></div>
-                </div>
-              </div>
 
-              <!-- 上下行网速卡片 -->
-              <div class="custom-speed-box">
-                <div>
-                  <div class="speed-col-title title-down">📥 DOWN (下载)</div>
-                  <div class="speed-col-item">速: <b class="net-down-speed">202 B/s</b></div>
-                  <div class="speed-col-item">量: <span class="net-down-total">96.7 MB</span></div>
+                <!-- 上下行网速卡片 -->
+                <div class="custom-speed-box">
+                  <div>
+                    <div class="speed-col-title title-down">📥 DOWN (下载)</div>
+                    <div class="speed-col-item">速: <b class="net-down-speed">202 B/s</b></div>
+                    <div class="speed-col-item">量: <span class="net-down-total">96.7 MB</span></div>
+                  </div>
+                  <div>
+                    <div class="speed-col-title title-up">📤 UP (上传)</div>
+                    <div class="speed-col-item">速: <b class="net-up-speed">124 B/s</b></div>
+                    <div class="speed-col-item">量: <span class="net-up-total">64.91 MB</span></div>
+                  </div>
                 </div>
-                <div>
-                  <div class="speed-col-title title-up">📤 UP (上传)</div>
-                  <div class="speed-col-item">速: <b class="net-up-speed">124 B/s</b></div>
-                  <div class="speed-col-item">量: <span class="net-up-total">64.91 MB</span></div>
-                </div>
-              </div>
-            `;
+              `;
 
-            // 插入在操作图标栏上方
-            if (bottomIcons && bottomIcons.parentElement) {
-              bottomIcons.parentElement.insertBefore(monitorBox, bottomIcons);
-            } else {
-              card.appendChild(monitorBox);
+              // 插入在操作按钮底栏的正上方
+              card.insertBefore(monitorBox, div);
             }
           });
         }
 
-        // 持续观察 Vue DOM 变化
-        const observer = new MutationObserver(() => injectMonitorData());
-        const app = document.getElementById('app');
-        if (app) observer.observe(app, { childList: true, subtree: true });
-        
-        setInterval(injectMonitorData, 1000);
+        setInterval(injectMonitorData, 800);
       })();
     </script>
   </body>
