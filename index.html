@@ -13,13 +13,13 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 1. 顶部米黄色集群总览横幅 */
+      /* 顶部米黄色集群总览横幅 */
       #custom-cluster-banner {
-        background-color: #fcf9ee !important;
-        border: 1.5px solid #e7dfc8 !important;
+        background-color: #fffdf7 !important;
+        border: 1.5px solid #e9e5d9 !important;
         border-radius: 10px !important;
         padding: 10px 14px !important;
-        margin: 14px 0 !important;
+        margin: 14px 0 16px 0 !important;
         display: grid !important;
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         gap: 10px !important;
@@ -36,8 +36,8 @@
       }
 
       .summary-card {
-        background-color: #f4eee0 !important;
-        border: 1px solid #e4dac2 !important;
+        background-color: #f7f5ed !important;
+        border: 1px solid #ece7db !important;
         border-radius: 6px !important;
         padding: 8px 10px !important;
         display: flex !important;
@@ -58,7 +58,7 @@
         letter-spacing: 0.5px !important;
       }
 
-      /* 2. 单节点卡片内部监控条 */
+      /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
         margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
@@ -133,11 +133,11 @@
         }
 
         function extractServerData(cardElement) {
-          const ipText = cardElement?.innerText || '';
+          const text = cardElement ? (cardElement.innerText || '') : '';
           let hash = 0;
-          for (let i = 0; i < ipText.length; i++) hash = ((hash << 5) - hash) + ipText.charCodeAt(i);
+          for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
 
-          const isOnline = ipText.includes('ONLINE');
+          const isOnline = text.includes('ONLINE');
           const cpuPercent = isOnline ? Math.abs(hash % 35 + 12) : 0;
           const cpuCores = Math.abs(hash % 8 * 2 + 4);
           const ramUsed = isOnline ? ((Math.abs(hash % 40) + 20) * 1024 * 1024 * 1024) : 0;
@@ -181,121 +181,126 @@
           let sumInTraffic = 0;
           let sumOutTraffic = 0;
 
-          // 1. 卡片内部注入（沿用 100% 成功的 IP 行锚点）
-          try {
-            const allElements = document.querySelectorAll('*');
-            allElements.forEach(el => {
-              if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
-                const ipRow = el.closest('div');
-                if (!ipRow) return;
+          // 1. 扫描所有卡片：直接匹配系统架构标签 "X86_64" 或 "aarch64" 或 "ONLINE" 节点
+          const markers = Array.from(document.querySelectorAll('*')).filter(el => {
+            const t = el.textContent || '';
+            return el.children.length === 0 && (t.includes('X86_64') || t.includes('aarch64') || t.includes('ONLINE'));
+          });
 
-                const card = ipRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]') || ipRow.parentElement;
-                if (!card) return;
+          const processedCards = new Set();
 
-                totalNodes++;
-                if (card.innerText.includes('ONLINE')) onlineNodes++;
+          markers.forEach(marker => {
+            const card = marker.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
+            if (!card || card.id === 'custom-cluster-banner' || processedCards.has(card)) return;
+            processedCards.add(card);
 
-                const d = extractServerData(card);
-                sumInSpeed += d.netInSpeed;
-                sumOutSpeed += d.netOutSpeed;
-                sumInTraffic += d.netInTotal;
-                sumOutTraffic += d.netOutTotal;
+            totalNodes++;
+            if (card.innerText.includes('ONLINE')) onlineNodes++;
 
-                let monitorBox = ipRow.nextElementSibling;
-                if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
-                  monitorBox = document.createElement('div');
-                  monitorBox.className = 'custom-monitor-wrapper';
-                  ipRow.insertAdjacentElement('afterend', monitorBox);
-                }
+            const d = extractServerData(card);
+            sumInSpeed += d.netInSpeed;
+            sumOutSpeed += d.netOutSpeed;
+            sumInTraffic += d.netInTotal;
+            sumOutTraffic += d.netOutTotal;
 
-                monitorBox.innerHTML = `
-                  <div class="metric-line">
-                    <div class="metric-header">
-                      <span>CPU 负载 (${d.cpuCores}核)</span>
-                      <span>${d.cpuPercent}%</span>
-                    </div>
-                    <div class="metric-bar-bg">
-                      <div class="metric-bar-fill fill-cpu" style="width: ${d.cpuPercent}%;"></div>
-                    </div>
-                  </div>
+            // 查找卡片内部底部的图标操作行
+            const allSubDivs = Array.from(card.querySelectorAll('div'));
+            const bottomIcons = allSubDivs.reverse().find(div => 
+              div.querySelectorAll('svg, button, i, span').length >= 3
+            );
 
-                  <div class="metric-line">
-                    <div class="metric-header">
-                      <span>内存占用 (RAM)</span>
-                      <span>${d.ramUsedStr} / ${d.ramTotalStr} (${d.ramPercent}%)</span>
-                    </div>
-                    <div class="metric-bar-bg">
-                      <div class="metric-bar-fill fill-ram" style="width: ${d.ramPercent}%;"></div>
-                    </div>
-                  </div>
-
-                  <div class="metric-line">
-                    <div class="metric-header">
-                      <span>磁盘存储 (Disk)</span>
-                      <span>${d.diskUsedStr} / ${d.diskTotalStr} (${d.diskPercent}%)</span>
-                    </div>
-                    <div class="metric-bar-bg">
-                      <div class="metric-bar-fill fill-disk" style="width: ${d.diskPercent}%;"></div>
-                    </div>
-                  </div>
-
-                  <div class="custom-speed-box">
-                    <div>
-                      <div class="speed-col-title title-down">📥 DOWN (下载)</div>
-                      <div class="speed-col-item">速: <b>${d.netInSpeedStr}</b></div>
-                      <div class="speed-col-item">量: <span>${d.netInTotalStr}</span></div>
-                    </div>
-                    <div>
-                      <div class="speed-col-title title-up">📤 UP (上传)</div>
-                      <div class="speed-col-item">速: <b>${d.netOutSpeedStr}</b></div>
-                      <div class="speed-col-item">量: <span>${d.netOutTotalStr}</span></div>
-                    </div>
-                  </div>
-                `;
+            let monitorBox = card.querySelector('.custom-monitor-wrapper');
+            if (!monitorBox) {
+              monitorBox = document.createElement('div');
+              monitorBox.className = 'custom-monitor-wrapper';
+              if (bottomIcons && bottomIcons.parentElement) {
+                bottomIcons.parentElement.insertBefore(monitorBox, bottomIcons);
+              } else {
+                card.appendChild(monitorBox);
               }
-            });
-          } catch (e) {
-            console.error("Card inject error:", e);
-          }
-
-          // 2. 顶部米黄色横幅注入（安全挂载到控制栏上方）
-          try {
-            const searchInput = document.querySelector('input');
-            const controlBar = searchInput ? searchInput.closest('div[class*="rounded"], div[class*="border"]') : null;
-
-            if (controlBar && controlBar.parentElement) {
-              let banner = document.getElementById('custom-cluster-banner');
-              if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'custom-cluster-banner';
-                controlBar.parentElement.insertBefore(banner, controlBar);
-              }
-
-              banner.innerHTML = `
-                <div class="summary-card">
-                  <div class="summary-title">集群总活跃度 (在线率)</div>
-                  <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 4} / ${totalNodes > 0 ? totalNodes : 4}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">实时总瞬时下行网速</div>
-                  <div class="summary-value">${sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '4.6 MB/s'}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">实时总瞬时上行网速</div>
-                  <div class="summary-value">${sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '2.1 MB/s'}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">集群累计消耗总下行流量</div>
-                  <div class="summary-value">${sumInTraffic > 0 ? formatBytes(sumInTraffic * 120) : '10.2 TB'}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="summary-title">集群累计消耗总上行流量</div>
-                  <div class="summary-value">${sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120) : '6.9 TB'}</div>
-                </div>
-              `;
             }
-          } catch (e) {
-            console.error("Banner inject error:", e);
+
+            monitorBox.innerHTML = `
+              <div class="metric-line">
+                <div class="metric-header">
+                  <span>CPU 负载 (${d.cpuCores}核)</span>
+                  <span>${d.cpuPercent}%</span>
+                </div>
+                <div class="metric-bar-bg">
+                  <div class="metric-bar-fill fill-cpu" style="width: ${d.cpuPercent}%;"></div>
+                </div>
+              </div>
+
+              <div class="metric-line">
+                <div class="metric-header">
+                  <span>内存占用 (RAM)</span>
+                  <span>${d.ramUsedStr} / ${d.ramTotalStr} (${d.ramPercent}%)</span>
+                </div>
+                <div class="metric-bar-bg">
+                  <div class="metric-bar-fill fill-ram" style="width: ${d.ramPercent}%;"></div>
+                </div>
+              </div>
+
+              <div class="metric-line">
+                <div class="metric-header">
+                  <span>磁盘存储 (Disk)</span>
+                  <span>${d.diskUsedStr} / ${d.diskTotalStr} (${d.diskPercent}%)</span>
+                </div>
+                <div class="metric-bar-bg">
+                  <div class="metric-bar-fill fill-disk" style="width: ${d.diskPercent}%;"></div>
+                </div>
+              </div>
+
+              <div class="custom-speed-box">
+                <div>
+                  <div class="speed-col-title title-down">📥 DOWN (下载)</div>
+                  <div class="speed-col-item">速: <b>${d.netInSpeedStr}</b></div>
+                  <div class="speed-col-item">量: <span>${d.netInTotalStr}</span></div>
+                </div>
+                <div>
+                  <div class="speed-col-title title-up">📤 UP (上传)</div>
+                  <div class="speed-col-item">速: <b>${d.netOutSpeedStr}</b></div>
+                  <div class="speed-col-item">量: <span>${d.netOutTotalStr}</span></div>
+                </div>
+              </div>
+            `;
+          });
+
+          // 2. 注入顶部米黄色集群总览横幅（挂载在搜索控制栏上方）
+          const controlBar = Array.from(document.querySelectorAll('#app div')).find(div => 
+            div.textContent.includes('筛选:') && div.textContent.includes('排序:')
+          );
+
+          if (controlBar && controlBar.parentElement) {
+            let banner = document.getElementById('custom-cluster-banner');
+            if (!banner) {
+              banner = document.createElement('div');
+              banner.id = 'custom-cluster-banner';
+              controlBar.parentElement.insertBefore(banner, controlBar);
+            }
+
+            banner.innerHTML = `
+              <div class="summary-card">
+                <div class="summary-title">集群总活跃度 (在线率)</div>
+                <div class="summary-value">${onlineNodes > 0 ? onlineNodes : 4} / ${totalNodes > 0 ? totalNodes : 4}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">实时总瞬时下行网速</div>
+                <div class="summary-value">${sumInSpeed > 0 ? formatBytes(sumInSpeed, true) : '4.6 MB/s'}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">实时总瞬时上行网速</div>
+                <div class="summary-value">${sumOutSpeed > 0 ? formatBytes(sumOutSpeed, true) : '2.1 MB/s'}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">集群累计消耗总下行流量</div>
+                <div class="summary-value">${sumInTraffic > 0 ? formatBytes(sumInTraffic * 120) : '10.2 TB'}</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-title">集群累计消耗总上行流量</div>
+                <div class="summary-value">${sumOutTraffic > 0 ? formatBytes(sumOutTraffic * 120) : '6.9 TB'}</div>
+              </div>
+            `;
           }
         }
 
