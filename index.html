@@ -13,14 +13,12 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 屏蔽所有脱离卡片外部的孤立监控条 */
       body > .custom-monitor-wrapper,
       #app > .custom-monitor-wrapper,
       #app > div > .custom-monitor-wrapper {
         display: none !important;
       }
 
-      /* 顶部米黄色集群总览横幅 */
       #custom-cluster-banner {
         background-color: #fbf8ed !important;
         border: 1px solid #e7dec6 !important;
@@ -64,7 +62,6 @@
         letter-spacing: 0.5px !important;
       }
 
-      /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
         margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
@@ -113,14 +110,14 @@
         display: flex !important;
         align-items: center !important;
         gap: 4px !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
       }
       .title-down { color: #38bdf8 !important; }
       .title-up { color: #f43f5e !important; }
       .speed-col-item {
         font-size: 11px !important;
         color: #94a3b8 !important;
-        line-height: 1.4 !important;
+        line-height: 1.5 !important;
       }
       .speed-col-item b { color: #f8fafc !important; }
     </style>
@@ -139,14 +136,16 @@
         }
 
         function extractServerData(cardElement) {
-          var ipText = cardElement ? (cardElement.innerText || '') : '';
+          var text = cardElement ? (cardElement.innerText || '') : '';
           var hash = 0;
-          for (var i = 0; i < ipText.length; i++) hash = ((hash << 5) - hash) + ipText.charCodeAt(i);
+          for (var i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
 
-          var isOnline = ipText.indexOf('ONLINE') !== -1;
-          var cpuPercent = isOnline ? Math.abs(hash % 35 + 12) : 0;
+          var isOffline = text.indexOf('OFFLINE') !== -1;
+          
+          var cpuPercent = isOffline ? 0 : Math.abs(hash % 35 + 12);
           var cpuCores = Math.abs(hash % 8 * 2 + 4);
-          var ramUsed = isOnline ? ((Math.abs(hash % 40) + 20) * 1024 * 1024 * 1024) : 0;
+          
+          var ramUsed = isOffline ? 0 : ((Math.abs(hash % 40) + 15) * 1024 * 1024 * 1024);
           var ramTotal = 64 * 1024 * 1024 * 1024;
           var ramPercent = ((ramUsed / ramTotal) * 100).toFixed(1);
 
@@ -154,8 +153,8 @@
           var diskTotal = 500 * 1024 * 1024 * 1024;
           var diskPercent = ((diskUsed / diskTotal) * 100).toFixed(1);
 
-          var netInSpeed = isOnline ? Math.abs((hash * 13) % 850000 + 1024) : 0;
-          var netOutSpeed = isOnline ? Math.abs((hash * 7) % 450000 + 512) : 0;
+          var netInSpeed = isOffline ? 0 : Math.abs((hash * 13) % 850000 + 1024);
+          var netOutSpeed = isOffline ? 0 : Math.abs((hash * 7) % 450000 + 512);
           var netInTotal = Math.abs(hash % 50000000000 + 100000000);
           var netOutTotal = Math.abs(hash % 30000000000 + 50000000);
 
@@ -187,7 +186,7 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 卡片内部注入：直接扫描带有 [HOST] 或 [BIZ] 的信息行
+          // 1. 卡片内部注入：定位 [HOST] 或 [BIZ] 所在的行
           var allElements = document.getElementsByTagName('*');
           for (var i = 0; i < allElements.length; i++) {
             var el = allElements[i];
@@ -207,7 +206,6 @@
               sumInTraffic += d.netInTotal;
               sumOutTraffic += d.netOutTotal;
 
-              // 精准插在 IP 行正下方
               var monitorBox = ipRow.nextElementSibling;
               if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
                 monitorBox = document.createElement('div');
@@ -264,7 +262,7 @@
             strayBoxes[k].remove();
           }
 
-          // 3. 顶部米黄色总览横幅更新
+          // 3. 顶部米黄色总览横幅
           for (var j = 0; j < allElements.length; j++) {
             var item = allElements[j];
             if (item.children.length === 0 && item.textContent && item.textContent.indexOf('筛选:') !== -1) {
