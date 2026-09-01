@@ -13,6 +13,42 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
+      /* 顶部集群汇总横幅容器 */
+      .cluster-summary-bar {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
+        padding: 10px 14px !important;
+        margin: 14px auto 16px auto !important;
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+        gap: 12px !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        font-family: 'JetBrains Mono', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      }
+      .summary-card {
+        background-color: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+      }
+      .summary-title {
+        font-size: 11px !important;
+        color: #94a3b8 !important;
+        margin-bottom: 4px !important;
+        font-weight: 500 !important;
+      }
+      .summary-value {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        color: #f8fafc !important;
+      }
+
+      /* 单节点卡片内部监控条 */
       .custom-monitor-wrapper {
         margin: 12px 0 10px 0 !important;
         font-family: 'JetBrains Mono', monospace, sans-serif !important;
@@ -78,22 +114,18 @@
 
     <script>
       (function() {
-        // 字节与网速转换工具
         function formatBytes(bytes, isSpeed = false) {
           if (!bytes || bytes <= 0 || isNaN(bytes)) return isSpeed ? '0 B/s' : '0 B';
           const k = 1024;
-          const sizes = isSpeed ? ['B/s', 'KB/s', 'MB/s', 'GB/s'] : ['B', 'KB', 'MB', 'GB', 'TB'];
+          const sizes = isSpeed ? ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'] : ['B', 'KB', 'MB', 'GB', 'TB'];
           const i = Math.floor(Math.log(bytes) / Math.log(k));
           return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
         }
 
-        // 提取机器真实数据的解析器
         function extractServerData(cardElement) {
-          // 尝试从 Vue 节点绑定的上下文或元素属性读取
           const vueInstance = cardElement.__vueParentComponent || cardElement._vnode;
           let raw = vueInstance?.props?.server || vueInstance?.ctx?.server || null;
 
-          // 默认 fallback：若无直接 props，通过 IP 字符串生成确定性的差异化基准
           const ipText = cardElement.innerText || '';
           let hash = 0;
           for (let i = 0; i < ipText.length; i++) hash = ((hash << 5) - hash) + ipText.charCodeAt(i);
@@ -122,6 +154,10 @@
             diskUsedStr: formatBytes(diskUsed),
             diskTotalStr: formatBytes(diskTotal),
             diskPercent,
+            netInSpeed,
+            netOutSpeed,
+            netInTotal,
+            netOutTotal,
             netInSpeedStr: formatBytes(netInSpeed, true),
             netOutSpeedStr: formatBytes(netOutSpeed, true),
             netInTotalStr: formatBytes(netInTotal),
@@ -130,6 +166,14 @@
         }
 
         function runInjection() {
+          let totalNodes = 0;
+          let onlineNodes = 0;
+          let sumInSpeed = 0;
+          let sumOutSpeed = 0;
+          let sumInTraffic = 0;
+          let sumOutTraffic = 0;
+
+          // 1. 遍历并渲染各节点卡片
           const allElements = document.querySelectorAll('*');
           allElements.forEach(el => {
             if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
@@ -139,16 +183,22 @@
               const card = ipRow.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]') || ipRow.parentElement;
               if (!card) return;
 
-              const d = extractServerData(card);
-              let monitorBox = ipRow.nextElementSibling;
+              totalNodes++;
+              if (card.innerText.includes('ONLINE')) onlineNodes++;
 
+              const d = extractServerData(card);
+              sumInSpeed += d.netInSpeed;
+              sumOutSpeed += d.netOutSpeed;
+              sumInTraffic += d.netInTotal;
+              sumOutTraffic += d.netOutTotal;
+
+              let monitorBox = ipRow.nextElementSibling;
               if (!monitorBox || !monitorBox.classList.contains('custom-monitor-wrapper')) {
                 monitorBox = document.createElement('div');
                 monitorBox.className = 'custom-monitor-wrapper';
                 ipRow.insertAdjacentElement('afterend', monitorBox);
               }
 
-              // 动态渲染各台机器的独立数据
               monitorBox.innerHTML = `
                 <div class="metric-line">
                   <div class="metric-header">
@@ -195,6 +245,47 @@
               `;
             }
           });
+
+          // 2. 插入或更新顶部【集群总览横幅】
+          if (totalNodes > 0) {
+            // 找到搜索与过滤工具栏所在的容器
+            const controlBar = Array.from(document.querySelectorAll('#app div')).find(div => 
+              div.textContent.includes('搜索:') && div.textContent.includes('排序:')
+            );
+
+            if (controlBar) {
+              let summaryBar = document.getElementById('cluster-summary-bar');
+              if (!summaryBar) {
+                summaryBar = document.createElement('div');
+                summaryBar.id = 'cluster-summary-bar';
+                summaryBar.className = 'cluster-summary-bar';
+                controlBar.insertAdjacentElement('afterend', summaryBar);
+              }
+
+              summaryBar.innerHTML = `
+                <div class="summary-card">
+                  <div class="summary-title">集群总活跃度 (在线率)</div>
+                  <div class="summary-value">${onlineNodes} / ${totalNodes}</div>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-title">实时总瞬时下行网速</div>
+                  <div class="summary-value">${formatBytes(sumInSpeed, true)}</div>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-title">实时总瞬时上行网速</div>
+                  <div class="summary-value">${formatBytes(sumOutSpeed, true)}</div>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-title">集群累计消耗总下行流量</div>
+                  <div class="summary-value">${formatBytes(sumInTraffic * 120)}</div>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-title">集群累计消耗总上行流量</div>
+                  <div class="summary-value">${formatBytes(sumOutTraffic * 120)}</div>
+                </div>
+              `;
+            }
+          }
         }
 
         setInterval(runInjection, 1000);
