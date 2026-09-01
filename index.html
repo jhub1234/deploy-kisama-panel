@@ -13,15 +13,16 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 监控与网速整体卡片 */
+      /* 完整监控扩展容器 */
       .custom-monitor-wrapper {
-        margin: 12px 0 8px 0 !important;
-        font-family: 'JetBrains Mono', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        margin: 12px 0 10px 0 !important;
+        font-family: 'JetBrains Mono', monospace, sans-serif !important;
         width: 100% !important;
+        box-sizing: border-box !important;
         display: block !important;
       }
 
-      /* CPU / RAM / Disk 进度条 */
+      /* 进度条样式 */
       .metric-line {
         margin-bottom: 8px !important;
       }
@@ -48,7 +49,7 @@
       .fill-ram { background-color: #3b82f6 !important; }
       .fill-disk { background-color: #6366f1 !important; }
 
-      /* 下方网速双栏模块 */
+      /* 下方网速双栏卡片 */
       .custom-speed-box {
         background-color: rgba(255, 255, 255, 0.04) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -62,6 +63,9 @@
       .speed-col-title {
         font-size: 11px !important;
         font-weight: 700 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
         margin-bottom: 2px !important;
       }
       .title-down { color: #38bdf8 !important; }
@@ -82,84 +86,84 @@
 
     <script>
       (function() {
-        function injectMonitorData() {
-          // 自动勾选右上角「预览常驻」以激活原生监控数据流（若有）
-          const previewCheckbox = Array.from(document.querySelectorAll('input[type="checkbox"]')).find(cb => {
-            return cb.parentElement && cb.parentElement.textContent.includes('预览');
-          });
-          if (previewCheckbox && !previewCheckbox.checked) {
-            previewCheckbox.click();
-          }
+        function buildMonitorHtml() {
+          return `
+            <!-- CPU 负载 -->
+            <div class="metric-line">
+              <div class="metric-header">
+                <span>CPU 负载 (20核)</span>
+                <span>31.0%</span>
+              </div>
+              <div class="metric-bar-bg">
+                <div class="metric-bar-fill fill-cpu" style="width: 31%;"></div>
+              </div>
+            </div>
 
-          // 核心查找法：找到包含操作小图标（终端、编辑、刷新等）的所有容器
-          const allDivs = document.querySelectorAll('#app div');
-          allDivs.forEach(div => {
-            // 通过卡片特征：含有多个 svg 操作按钮，且属于卡片底栏
-            const svgs = div.querySelectorAll('svg');
-            if (svgs.length >= 4 && !div.classList.contains('injected-flag')) {
-              const card = div.parentElement;
-              if (!card || card.querySelector('.custom-monitor-wrapper')) return;
+            <!-- 内存占用 (RAM) -->
+            <div class="metric-line">
+              <div class="metric-header">
+                <span>内存占用 (RAM)</span>
+                <span>89.65 GB / 125.58 GB (71.4%)</span>
+              </div>
+              <div class="metric-bar-bg">
+                <div class="metric-bar-fill fill-ram" style="width: 71.4%;"></div>
+              </div>
+            </div>
 
-              div.classList.add('injected-flag');
+            <!-- 磁盘存储 (Disk) -->
+            <div class="metric-line">
+              <div class="metric-header">
+                <span>磁盘存储 (Disk)</span>
+                <span>575.74 GB / 931.18 GB (61.8%)</span>
+              </div>
+              <div class="metric-bar-bg">
+                <div class="metric-bar-fill fill-disk" style="width: 61.8%;"></div>
+              </div>
+            </div>
 
+            <!-- 上下行网速卡片 -->
+            <div class="custom-speed-box">
+              <div>
+                <div class="speed-col-title title-down">📥 DOWN (下载)</div>
+                <div class="speed-col-item">速: <b class="net-down-speed">202 B/s</b></div>
+                <div class="speed-col-item">量: <span class="net-down-total">96.7 MB</span></div>
+              </div>
+              <div>
+                <div class="speed-col-title title-up">📤 UP (上传)</div>
+                <div class="speed-col-item">速: <b class="net-up-speed">124 B/s</b></div>
+                <div class="speed-col-item">量: <span class="net-up-total">64.91 MB</span></div>
+              </div>
+            </div>
+          `;
+        }
+
+        function runInjection() {
+          // 直接遍历页面所有元素，找到显示 IP 的这一行（包含 HOST 或 BIZ）
+          const allElements = document.querySelectorAll('*');
+          allElements.forEach(el => {
+            if (el.children.length === 0 && (el.textContent.includes('HOST') || el.textContent.includes('BIZ') || el.textContent.includes('None'))) {
+              // 找到 IP 这一整行的容器
+              const ipRow = el.closest('div');
+              if (!ipRow) return;
+
+              // 检查该 IP 行后面是否已经挂载了监控组件
+              if (ipRow.nextElementSibling && ipRow.nextElementSibling.classList.contains('custom-monitor-wrapper')) {
+                return;
+              }
+
+              // 创建监控组件
               const monitorBox = document.createElement('div');
               monitorBox.className = 'custom-monitor-wrapper';
-              monitorBox.innerHTML = `
-                <!-- CPU 负载 -->
-                <div class="metric-line">
-                  <div class="metric-header">
-                    <span>CPU 负载 (20核)</span>
-                    <span>31.0%</span>
-                  </div>
-                  <div class="metric-bar-bg">
-                    <div class="metric-bar-fill fill-cpu" style="width: 31%;"></div>
-                  </div>
-                </div>
+              monitorBox.innerHTML = buildMonitorHtml();
 
-                <!-- 内存占用 (RAM) -->
-                <div class="metric-line">
-                  <div class="metric-header">
-                    <span>内存占用 (RAM)</span>
-                    <span>89.65 GB / 125.58 GB (71.4%)</span>
-                  </div>
-                  <div class="metric-bar-bg">
-                    <div class="metric-bar-fill fill-ram" style="width: 71.4%;"></div>
-                  </div>
-                </div>
-
-                <!-- 磁盘存储 (Disk) -->
-                <div class="metric-line">
-                  <div class="metric-header">
-                    <span>磁盘存储 (Disk)</span>
-                    <span>575.74 GB / 931.18 GB (61.8%)</span>
-                  </div>
-                  <div class="metric-bar-bg">
-                    <div class="metric-bar-fill fill-disk" style="width: 61.8%;"></div>
-                  </div>
-                </div>
-
-                <!-- 上下行网速卡片 -->
-                <div class="custom-speed-box">
-                  <div>
-                    <div class="speed-col-title title-down">📥 DOWN (下载)</div>
-                    <div class="speed-col-item">速: <b class="net-down-speed">202 B/s</b></div>
-                    <div class="speed-col-item">量: <span class="net-down-total">96.7 MB</span></div>
-                  </div>
-                  <div>
-                    <div class="speed-col-title title-up">📤 UP (上传)</div>
-                    <div class="speed-col-item">速: <b class="net-up-speed">124 B/s</b></div>
-                    <div class="speed-col-item">量: <span class="net-up-total">64.91 MB</span></div>
-                  </div>
-                </div>
-              `;
-
-              // 插入在操作按钮底栏的正上方
-              card.insertBefore(monitorBox, div);
+              // 精准插入在 IP 行的正下方
+              ipRow.insertAdjacentElement('afterend', monitorBox);
             }
           });
         }
 
-        setInterval(injectMonitorData, 800);
+        // 高频监测以防 Vue 重新渲染抹除 DOM
+        setInterval(runInjection, 500);
       })();
     </script>
   </body>
