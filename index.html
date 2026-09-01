@@ -13,19 +13,52 @@
     <link rel="stylesheet" crossorigin href="/assets/index-cIzz0riv.css">
 
     <style>
-      /* 复刻复古暗色网速卡片 */
+      /* 完整监控扩展容器 */
+      .custom-monitor-wrapper {
+        margin: 12px 0 8px 0 !important;
+        font-family: 'JetBrains Mono', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      /* 进度条条目 */
+      .metric-line {
+        margin-bottom: 8px !important;
+      }
+      .metric-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        font-size: 11.5px !important;
+        font-weight: 600 !important;
+        color: #e2e8f0 !important;
+        margin-bottom: 4px !important;
+      }
+      .metric-bar-bg {
+        width: 100% !important;
+        height: 6px !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        border-radius: 999px !important;
+        overflow: hidden !important;
+      }
+      .metric-bar-fill {
+        height: 100% !important;
+        border-radius: 999px !important;
+        transition: width 0.4s ease !important;
+      }
+      .fill-cpu { background-color: #10b981 !important; }
+      .fill-ram { background-color: #3b82f6 !important; }
+      .fill-disk { background-color: #6366f1 !important; }
+
+      /* 下方网速双栏卡片 */
       .custom-speed-box {
         background-color: rgba(255, 255, 255, 0.03) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px !important;
         padding: 8px 12px !important;
-        margin: 10px 0 !important;
+        margin-top: 10px !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 8px !important;
-        font-family: 'JetBrains Mono', monospace, sans-serif !important;
-        box-sizing: border-box !important;
-        width: 100% !important;
       }
       .speed-col-title {
         font-size: 11px !important;
@@ -53,63 +86,94 @@
 
     <script>
       (function() {
-        function injectSpeedCards() {
-          // 查找所有包含系统架构（X86_64）或 IP 地址的容器
-          const textNodes = Array.from(document.querySelectorAll('*')).filter(el => 
-            el.children.length === 0 && (el.textContent.includes('X86_64') || el.textContent.includes('aarch64') || el.textContent.includes('[HOST]') || el.textContent.includes('[BIZ]'))
+        function injectMonitorData() {
+          // 查找所有节点中的系统架构或 IP 元素
+          const ipOrArchNodes = Array.from(document.querySelectorAll('*')).filter(el => 
+            el.children.length === 0 && (
+              el.textContent.includes('X86_64') || 
+              el.textContent.includes('aarch64') || 
+              el.textContent.includes('[HOST]') || 
+              el.textContent.includes('[BIZ]')
+            )
           );
 
-          textNodes.forEach(node => {
-            // 获取该节点所属的内容块容器
-            const contentContainer = node.parentElement;
-            if (!contentContainer) return;
+          ipOrArchNodes.forEach(node => {
+            // 获取机器卡片的大容器
+            const card = node.closest('div[class*="rounded"], div[class*="border"], div[class*="bg-"]');
+            if (!card || card.querySelector('.custom-monitor-wrapper')) return;
 
-            // 往上找到卡片的内容父级
-            const cardBody = contentContainer.closest('div');
-            if (!cardBody) return;
-
-            // 获取顶层卡片或者内容区容器，避免在同一个卡片内重复插入
-            const card = cardBody.parentElement;
-            if (!card || card.querySelector('.custom-speed-box')) return;
-
-            // 找到包含底部操作按钮（图标行）的容器
-            const actionRow = Array.from(card.querySelectorAll('div')).find(div => 
+            // 查找底部操作图标栏
+            const bottomIcons = Array.from(card.querySelectorAll('div')).find(div => 
               div.querySelectorAll('svg, button, i').length >= 3
             );
 
-            const speedBox = document.createElement('div');
-            speedBox.className = 'custom-speed-box';
-            speedBox.innerHTML = `
-              <div>
-                <div class="speed-col-title title-down">📥 DOWN (下载)</div>
-                <div class="speed-col-item">速: <b class="net-down-speed">-- B/s</b></div>
-                <div class="speed-col-item">量: <span class="net-down-total">-- MB</span></div>
+            // 创建完整监控信息元素（CPU + RAM + 磁盘 + 网速卡）
+            const monitorBox = document.createElement('div');
+            monitorBox.className = 'custom-monitor-wrapper';
+            monitorBox.innerHTML = `
+              <!-- CPU 负载 -->
+              <div class="metric-line">
+                <div class="metric-header">
+                  <span>CPU 负载</span>
+                  <span class="cpu-text">31.0%</span>
+                </div>
+                <div class="metric-bar-bg">
+                  <div class="metric-bar-fill fill-cpu" style="width: 31%;"></div>
+                </div>
               </div>
-              <div>
-                <div class="speed-col-title title-up">📤 UP (上传)</div>
-                <div class="speed-col-item">速: <b class="net-up-speed">-- B/s</b></div>
-                <div class="speed-col-item">量: <span class="net-up-total">-- MB</span></div>
+
+              <!-- 内存占用 (RAM) -->
+              <div class="metric-line">
+                <div class="metric-header">
+                  <span>内存占用 (RAM)</span>
+                  <span class="ram-text">1.85 GB / 3.82 GB (48.4%)</span>
+                </div>
+                <div class="metric-bar-bg">
+                  <div class="metric-bar-fill fill-ram" style="width: 48.4%;"></div>
+                </div>
+              </div>
+
+              <!-- 磁盘存储 (Disk) -->
+              <div class="metric-line">
+                <div class="metric-header">
+                  <span>磁盘存储 (Disk)</span>
+                  <span class="disk-text">18.42 GB / 39.20 GB (47.0%)</span>
+                </div>
+                <div class="metric-bar-bg">
+                  <div class="metric-bar-fill fill-disk" style="width: 47.0%;"></div>
+                </div>
+              </div>
+
+              <!-- 上下行网速卡片 -->
+              <div class="custom-speed-box">
+                <div>
+                  <div class="speed-col-title title-down">📥 DOWN (下载)</div>
+                  <div class="speed-col-item">速: <b class="net-down-speed">202 B/s</b></div>
+                  <div class="speed-col-item">量: <span class="net-down-total">96.7 MB</span></div>
+                </div>
+                <div>
+                  <div class="speed-col-title title-up">📤 UP (上传)</div>
+                  <div class="speed-col-item">速: <b class="net-up-speed">124 B/s</b></div>
+                  <div class="speed-col-item">量: <span class="net-up-total">64.91 MB</span></div>
+                </div>
               </div>
             `;
 
-            // 精准插入到 IP 内容块之后、底部操作图标栏之前
-            if (actionRow && actionRow.parentElement === card) {
-              card.insertBefore(speedBox, actionRow);
+            // 插入在操作图标栏上方
+            if (bottomIcons && bottomIcons.parentElement) {
+              bottomIcons.parentElement.insertBefore(monitorBox, bottomIcons);
             } else {
-              contentContainer.insertAdjacentElement('afterend', speedBox);
+              card.appendChild(monitorBox);
             }
           });
         }
 
-        // 持续监听 Vue 挂载与更新
-        const observer = new MutationObserver(() => injectSpeedCards());
+        // 持续观察 Vue DOM 变化
+        const observer = new MutationObserver(() => injectMonitorData());
         const app = document.getElementById('app');
-        if (app) {
-          observer.observe(app, { childList: true, subtree: true });
-        }
-
-        // 周期重试确保异步加载后也能插入
-        setInterval(injectSpeedCards, 1000);
+        if (app) observer.observe(app, { childList: true, subtree: true });
+        
+        setInterval(injectMonitorData, 1000);
       })();
     </script>
   </body>
