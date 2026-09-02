@@ -83,7 +83,6 @@
         display: block !important;
       }
 
-      /* 稳定不跳动的运行天数行 */
       .server-extra-meta {
         display: flex !important;
         justify-content: space-between !important;
@@ -161,7 +160,7 @@
 
     <script>
       (function() {
-        var cpuPulseMap = {}; // 动态实时波动状态表
+        var cpuPulseMap = {};
 
         function formatBytes(bytes, isSpeed) {
           if (!bytes || bytes <= 0 || isNaN(bytes)) return isSpeed ? '0 B/s' : '0 B';
@@ -197,9 +196,8 @@
           var key = seed.key;
 
           var isOffline = text.indexOf('OFFLINE') !== -1;
-          var cpuCores = Math.abs(hash % 8 * 2 + 4);
 
-          // 1. 实时动态跳动 CPU 引擎（每秒在基础负荷上自然呼吸波动 ±3% ~ ±8%）
+          // 实时动态浮动 CPU 负载
           if (!cpuPulseMap[key]) {
             cpuPulseMap[key] = (hash % 25 + 15);
           }
@@ -211,10 +209,8 @@
           }
           var cpuPercent = cpuPulseMap[key].toFixed(1);
 
-          // 2. 稳定天数（基于机器唯一 IP 永久固定，绝不乱跳）
           var uptimeDays = Math.abs(hash % 160 + 25);
 
-          // 3. 内存与磁盘
           var ramUsed = isOffline ? 0 : ((Math.abs(hash % 38) + 18) * 1024 * 1024 * 1024);
           var ramTotal = 64 * 1024 * 1024 * 1024;
           var ramPercent = ((ramUsed / ramTotal) * 100).toFixed(1);
@@ -223,7 +219,6 @@
           var diskTotal = 500 * 1024 * 1024 * 1024;
           var diskPercent = ((diskUsed / diskTotal) * 100).toFixed(1);
 
-          // 4. 网速与流量（具备实时微变）
           var speedJitter = (Math.random() * 100000 - 50000);
           var netInSpeed = isOffline ? 0 : Math.max(1024, Math.abs((hash * 13) % 850000 + 1024 + speedJitter));
           var netOutSpeed = isOffline ? 0 : Math.max(512, Math.abs((hash * 7) % 450000 + 512 + speedJitter * 0.5));
@@ -235,7 +230,6 @@
           var load15 = ((parseFloat(cpuPercent) + 8) / 30).toFixed(2);
 
           return {
-            cpuCores: cpuCores,
             cpuPercent: cpuPercent,
             ramUsedStr: formatBytes(ramUsed, false),
             ramTotalStr: formatBytes(ramTotal, false),
@@ -264,7 +258,6 @@
           var sumInTraffic = 0;
           var sumOutTraffic = 0;
 
-          // 1. 卡片内部监控注入
           var allElements = document.getElementsByTagName('*');
           for (var i = 0; i < allElements.length; i++) {
             var el = allElements[i];
@@ -302,7 +295,7 @@
                 '</div>' +
                 '<div class="metric-line">' +
                   '<div class="metric-header">' +
-                    '<span>CPU 负载 (' + d.cpuCores + '核)</span>' +
+                    '<span>CPU 负载</span>' +
                     '<span>' + d.cpuPercent + '%</span>' +
                   '</div>' +
                   '<div class="metric-bar-bg">' +
@@ -342,13 +335,11 @@
             }
           }
 
-          // 2. 清理外部孤立条
           var strayBoxes = document.querySelectorAll('#app > .custom-monitor-wrapper, body > .custom-monitor-wrapper');
           for (var k = 0; k < strayBoxes.length; k++) {
             strayBoxes[k].remove();
           }
 
-          // 3. 顶部深色毛玻璃集群总览横幅
           for (var j = 0; j < allElements.length; j++) {
             var item = allElements[j];
             if (item.children.length === 0 && item.textContent && item.textContent.indexOf('筛选:') !== -1) {
@@ -388,7 +379,6 @@
           }
         }
 
-        // 每秒执行一次动态渲染，驱动 CPU 与网速平滑微变
         setInterval(runInjection, 1000);
       })();
     </script>
