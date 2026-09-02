@@ -84,21 +84,6 @@
         display: block !important;
       }
 
-      .server-extra-meta {
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        font-size: 10.5px !important;
-        color: #64748b !important;
-        margin-bottom: 10px !important;
-        padding-bottom: 6px !important;
-        border-bottom: 1px dashed rgba(255, 255, 255, 0.08) !important;
-      }
-      .server-extra-meta b {
-        color: #94a3b8 !important;
-        font-weight: 600 !important;
-      }
-
       .metric-line { margin-bottom: 8px !important; }
       .metric-header {
         display: flex !important;
@@ -121,12 +106,14 @@
         transition: width 0.4s ease, background-color 0.4s ease !important;
       }
 
+      /* 智能动态颜色状态 */
       .fill-normal-cpu  { background-color: #10b981 !important; box-shadow: 0 0 8px rgba(16, 185, 129, 0.3) !important; }
       .fill-normal-ram  { background-color: #3b82f6 !important; box-shadow: 0 0 8px rgba(59, 130, 246, 0.3) !important; }
       .fill-normal-disk { background-color: #8b5cf6 !important; box-shadow: 0 0 8px rgba(139, 92, 246, 0.3) !important; }
       .fill-warning     { background-color: #f59e0b !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4) !important; }
       .fill-danger      { background-color: #ef4444 !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.6) !important; }
 
+      /* 网速与流量卡片盒子 */
       .custom-speed-box {
         background: rgba(255, 255, 255, 0.02) !important;
         border: 1px solid rgba(255, 255, 255, 0.07) !important;
@@ -174,7 +161,6 @@
           return defaultClass;
         }
 
-        // 仅抓取卡片中绝对不变的标识（IP 地址或机器名）作为纯净特征，排除易变的时钟文本
         function getStableSeed(cardElement) {
           var ipMatch = (cardElement.innerText || '').match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
           var seedStr = ipMatch ? ipMatch[0] : (cardElement.innerText || '').slice(0, 20);
@@ -207,12 +193,6 @@
           var netInTotal = Math.abs(hash % 50000000000 + 100000000);
           var netOutTotal = Math.abs(hash % 30000000000 + 50000000);
 
-          // 运行天数与负载均值均基于纯净 IP 种子生成，永不跳动变异
-          var uptimeDays = Math.abs(hash % 150 + 18);
-          var load1 = ((Math.abs(hash % 150) + 20) / 100).toFixed(2);
-          var load5 = ((Math.abs(hash % 120) + 15) / 100).toFixed(2);
-          var load15 = ((Math.abs(hash % 100) + 10) / 100).toFixed(2);
-
           return {
             cpuCores: cpuCores,
             cpuPercent: typeof cpuPercent === 'number' ? cpuPercent.toFixed(1) : cpuPercent,
@@ -229,9 +209,7 @@
             netInSpeedStr: formatBytes(netInSpeed, true),
             netOutSpeedStr: formatBytes(netOutSpeed, true),
             netInTotalStr: formatBytes(netInTotal, false),
-            netOutTotalStr: formatBytes(netOutTotal, false),
-            uptimeDays: uptimeDays,
-            loadAvg: load1 + ' ' + load5 + ' ' + load15
+            netOutTotalStr: formatBytes(netOutTotal, false)
           };
         }
 
@@ -275,10 +253,6 @@
               var diskColorClass = getFillClass(parseFloat(d.diskPercent), 'fill-normal-disk');
 
               monitorBox.innerHTML = 
-                '<div class="server-extra-meta">' +
-                  '<span>运行: <b>' + d.uptimeDays + ' 天</b></span>' +
-                  '<span>负载: <b>' + d.loadAvg + '</b></span>' +
-                '</div>' +
                 '<div class="metric-line">' +
                   '<div class="metric-header">' +
                     '<span>CPU 负载 (' + d.cpuCores + '核)</span>' +
